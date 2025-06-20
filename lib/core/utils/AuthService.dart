@@ -70,21 +70,4 @@ class AuthService {
     return null;
   }
 
-
-  Future<void> signOutFacebook() async {
-    // Sign out from Google.
-    await _facebookSignIn.logOut();
-
-    // Sign out from Firebase.
-    await _auth.signOut();
-  }
-
-  Future<void> signOutGoogle() async {
-    // Sign out from Google.
-    await _googleSignIn.signOut();
-
-    // Sign out from Firebase.
-    await _auth.signOut();
-  }
-  /// Signs out the user from both Google and Firebase.
 }

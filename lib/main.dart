@@ -1,13 +1,14 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
-import 'package:newsapp/core/providers/NewsProvider.dart';
+import 'package:newsapp/presentation/screens/profile/Profile.dart';
+import 'package:newsapp/presentation/state/NewsProvider.dart';
 import 'package:newsapp/core/theme/colors.dart';
-import 'package:newsapp/ui/screens/inbox.dart';
+import 'package:newsapp/presentation/screens/inbox.dart';
 import 'package:provider/provider.dart';
-import 'package:newsapp/ui/screens/home_screen.dart'; // <- ini import biasa
+import 'package:newsapp/presentation/screens/home_screen.dart'; // <- ini import biasa
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'signInScreen.dart';
+import 'presentation/screens/profile/signInScreen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Wajib untuk async main
@@ -72,7 +73,7 @@ class _BottomNavigation extends State<BottomNavigation> {
         page = Inbox();
         break;
       case 2:
-        page = SignInScreen();
+        page = Profile();
         break;
       default:
         throw UnimplementedError("Tidak ada widget di $_selectedState");

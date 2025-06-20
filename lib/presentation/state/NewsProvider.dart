@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../constants/Api/news.dart';
+import '../../core/constants/Api/news.dart';
 
 class NewsProvider with ChangeNotifier {
   List<News> _news = [];

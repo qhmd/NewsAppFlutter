@@ -1,17 +1,17 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:newsapp/signInWithGoogle.dart';
+import 'package:newsapp/core/utils/AuthService.dart';
 // import com.facebook.FacebookSdk;
 // import com.facebook.appevents.AppEventsLogger;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
-// Define a stateless widget for the Profile
-class Profile extends StatelessWidget {
+// Define a stateless widget for the DataProfile
+class DataProfile extends StatelessWidget {
   // Firebase User object to hold user details
   final User user;
   
-  Profile({
+  DataProfile({
     super.key,
 
     // Constructor to initialize the user object
@@ -37,7 +37,7 @@ class Profile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             CircleAvatar(
-              // Display user's profile picture
+              // Display user's DataProfile picture
               backgroundImage: NetworkImage(user.photoURL ?? ""),
 
               // Set the radius of the avatar
@@ -51,12 +51,7 @@ class Profile extends StatelessWidget {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
-                // Sign out from Google and Firebase
-                _authService.signOutGoogle();
-                _authService.signOutFacebook();
-
-                // Navigate back to the sign-in screen
-                Navigator.pop(context);
+                await FirebaseAuth.instance.signOut();
               },
               style: ElevatedButton.styleFrom(
                 foregroundColor: Colors.white,

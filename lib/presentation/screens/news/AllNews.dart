@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:newsapp/core/providers/NewsProvider.dart';
-import 'package:newsapp/ui/screens/news/WebViewModal.dart';
+import 'package:newsapp/presentation/state/NewsProvider.dart';
+import 'package:newsapp/presentation/screens/news/WebViewModal.dart';
 import '../../../core/constants/formattedDate.dart';
 
 class AllNews extends StatefulWidget {
