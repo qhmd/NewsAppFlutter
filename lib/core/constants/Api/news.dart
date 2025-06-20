@@ -67,7 +67,7 @@ class NewsService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final List<dynamic> results = data['results'];
-      print("panjangnya ${results.length} dan offset ${offset}");
+      print("panjangnya ${results.length} dan offset $offset");
       final List<News> articles = results.map((item) => News.fromJson(item)).toList();
       return articles;
     } else {

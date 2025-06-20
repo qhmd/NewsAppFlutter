@@ -26,7 +26,7 @@ class NewsProvider with ChangeNotifier {
       _news.addAll(newArticles);
       _offset += 20;
       _hasMore = newArticlesRaw.length == 20;
-      print("dikesekusi ${_hasMore}");
+      print("dikesekusi $_hasMore");
     } catch (e) {
       debugPrint('Error: $e');
     } finally {

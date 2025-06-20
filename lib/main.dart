@@ -1,21 +1,23 @@
-
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:newsapp/core/providers/NewsProvider.dart';
 import 'package:newsapp/core/theme/colors.dart';
 import 'package:newsapp/ui/screens/inbox.dart';
-import 'package:newsapp/ui/screens/profile.dart';
 import 'package:provider/provider.dart';
 import 'package:newsapp/ui/screens/home_screen.dart'; // <- ini import biasa
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'signInScreen.dart';
 
-
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Wajib untuk async main
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(
     MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => NewsProvider())],
-      child: const MyApp()
-      )
-    );
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -27,10 +29,7 @@ class MyApp extends StatelessWidget {
       create: (context) => MyAppState(),
       child: MaterialApp(
         title: 'Namer App',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: lighColorScheme
-        ),
+        theme: ThemeData(useMaterial3: true, colorScheme: lighColorScheme),
         darkTheme: ThemeData(
           useMaterial3: true,
           brightness: Brightness.dark,
@@ -66,14 +65,14 @@ class _BottomNavigation extends State<BottomNavigation> {
     Widget page;
     final theme = Theme.of(context);
     switch (_selectedState) {
-      case 0 : 
+      case 0:
         page = HomeScreen();
         break;
-      case 1 : 
+      case 1:
         page = Inbox();
         break;
-      case 2 : 
-        page = Profile();
+      case 2:
+        page = SignInScreen();
         break;
       default:
         throw UnimplementedError("Tidak ada widget di $_selectedState");
