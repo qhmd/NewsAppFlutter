@@ -62,7 +62,6 @@ class NewsService {
     final uri = Uri.parse(
       '$baseUrl?limit=$limit&offset=$offset&api-key=$apiKey',
     );
-
     final response = await http.get(uri);
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);

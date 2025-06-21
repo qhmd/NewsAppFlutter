@@ -1,67 +1,118 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:newsapp/core/utils/AuthService.dart';
-// import com.facebook.FacebookSdk;
-// import com.facebook.appevents.AppEventsLogger;
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:newsapp/presentation/state/BookmarkProvider.dart';
+import 'package:newsapp/presentation/state/AuthProviders.dart';
+import 'package:provider/provider.dart';
+import 'package:settings_ui/settings_ui.dart';
 
 // Define a stateless widget for the DataProfile
 class DataProfile extends StatelessWidget {
   // Firebase User object to hold user details
   final User user;
-  
-  DataProfile({
-    super.key,
 
-    // Constructor to initialize the user object
-    required this.user,
-  });
-
-  // Instance of GoogleAuthService for authentication
-  final AuthService _authService = AuthService();
+  DataProfile({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
-    print(user.photoURL ?? "");
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          // Display user's name in the app bar
-          "Welcome ${user.displayName}",
-        ),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              // Display user's DataProfile picture
-              backgroundImage: NetworkImage(user.photoURL ?? ""),
-
-              // Set the radius of the avatar
-              radius: 40,
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Column(
+        children: [
+          SizedBox(height: 20),
+          CircleAvatar(
+            backgroundImage: user.photoURL != null && user.photoURL!.isNotEmpty
+                ? NetworkImage(user.photoURL!)
+                : AssetImage('assets/images/default_avatar.png')
+                      as ImageProvider,
+            radius: 40,
+          ),
+          SizedBox(height: 10),
+          Text("Email: ${user.email}"),
+          SizedBox(height: 20),
+          // Expanded agar SettingsList bisa scroll jika panjang
+          Expanded(
+            child: SettingsList(
+              physics: NeverScrollableScrollPhysics(),
+              sections: [
+                SettingsSection(
+                  tiles: <SettingsTile>[
+                    SettingsTile.navigation(
+                      leading: Icon(Icons.person),
+                      title: Text('Profile'),
+                      onPressed: (context) => print("Profile"),
+                    ),
+                    SettingsTile.navigation(
+                      leading: Icon(Icons.bookmark_border_outlined),
+                      title: Text('Bookmark'),
+                      onPressed: (context) => print("Bookmark"),
+                    ),
+                    SettingsTile.navigation(
+                      leading: Icon(Icons.book),
+                      title: Text('Offline Reading'),
+                      onPressed: (context) => print("Offline"),
+                    ),
+                    SettingsTile.navigation(
+                      leading: Icon(Icons.logout),
+                      title: Text('Logout'),
+                      onPressed: (context) {
+                        _dialogBuilder(context);
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
 
-            // Display user's email
-            Text("Email: ${user.email}"),
-
-            // Add spacing between elements
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                await FirebaseAuth.instance.signOut();
-              },
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: Colors.red.shade900,
+  Future<void> _dialogBuilder(BuildContext context) {
+    print("masuk disini");
+    final theme = Theme.of(context);
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: theme.colorScheme.onSecondaryContainer,
+          title: Text(
+            'You sure you want to logout ?',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onPrimary,
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              style: TextButton.styleFrom(
+                textStyle: Theme.of(context).textTheme.labelLarge,
               ),
-              child: Text("Sign Out"),
+              child: const Text('No', style: TextStyle(color: Colors.grey)),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                textStyle: Theme.of(context).textTheme.labelLarge,
+              ),
+              child: const Text('Yes, I Sure'),
+              onPressed: () async {
+                final authProvider = Provider.of<AuthProvider>(
+                  context,
+                  listen: false,
+                );
+                await AuthService().signOut();
+                authProvider.clearUser();
+                Navigator.pop(context);
+              },
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

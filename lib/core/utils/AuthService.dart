@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -15,7 +16,7 @@ class AuthService {
   /// Signs in the user with Google and returns the authenticated Firebase [User].
   ///
   /// Returns `null` if the sign-in process is canceled or fails.
-  Future<User?> signInWithGoogle() async {
+  Future<User?> signInWithGoogle(BuildContext context) async {
     try {
       // Trigger the Google Sign-In flow.
       final googleUser = await _googleSignIn.signIn();
@@ -32,11 +33,9 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      // Sign in to Firebase with the Google credential.
       final userCredential = await _auth.signInWithCredential(credential);
-
-      // Return the authenticated user.
-      return userCredential.user;
+      final user = userCredential.user;
+      return user;
     } catch (e) {
       // Print the error and return null if an exception occurs.
       print("Sign-in error: $e");
@@ -70,4 +69,9 @@ class AuthService {
     return null;
   }
 
+  Future<void> signOut() async {
+    await _auth.signOut();
+    await _googleSignIn.signOut();
+    await _facebookSignIn.logOut();
+  }
 }
