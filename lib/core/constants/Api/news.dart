@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -46,7 +48,7 @@ class News {
 class NewsService {
   final String apiKey = "gtORzHRECZwa9jePeHX6R2a4wQfzOz5q";
   final String baseUrl =
-      "http://api.nytimes.com/svc/news/v3/content/all/all.json";
+      "https://api.nytimes.com/svc/news/v3/content/all/all.json";
 
   int getRandomOffset() {
     // Buat list offset: [0, 20, 40, ..., 480]
@@ -58,19 +60,25 @@ class NewsService {
     return offsets[randomIndex];
   }
 
-  Future<List<News>> fetchNews(int offset, [int limit = 20]) async {
-    final uri = Uri.parse(
-      '$baseUrl?limit=$limit&offset=$offset&api-key=$apiKey',
-    );
-    final response = await http.get(uri);
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final List<dynamic> results = data['results'];
-      print("panjangnya ${results.length} dan offset $offset");
-      final List<News> articles = results.map((item) => News.fromJson(item)).toList();
-      return articles;
-    } else {
-      throw Exception('Failed to load news');
+  Future<List<News>> fetchNews(int offset, [int limit = 20]) async {try {
+      final uri = Uri.parse('$baseUrl?limit=$limit&offset=$offset&api-key=$apiKey');
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> results = data['results'];
+        return results.map((item) => News.fromJson(item)).toList();
+      } else if (response.statusCode == 429) {
+        throw Exception('API limit exceeded. Try again later.');
+      } else {
+        throw Exception('Failed to load news: Status ${response.statusCode}');
+      }
+    } on SocketException {
+      throw Exception('No internet connection');
+    } on FormatException {
+      throw Exception('Invalid data format from API');
+    } catch (e) {
+      throw Exception('Unknown error: $e');
     }
   }
 

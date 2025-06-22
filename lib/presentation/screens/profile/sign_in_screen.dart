@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:newsapp/core/utils/AuthService.dart';
 import 'package:sign_button/sign_button.dart';
-import 'package:newsapp/presentation/state/AuthProviders.dart';
+import 'package:newsapp/presentation/state/auth_providers.dart';
 
 class LoginScreen extends StatelessWidget {
   final AuthService _authService = AuthService();
@@ -82,7 +82,7 @@ class LoginScreen extends StatelessWidget {
                                         content: Text("Google login gagal"),
                                       ),
                                     );
-                                  } else {
+                                  }  else  {
                                     Provider.of<AuthProvider>(context, listen: false).setUser(user, context);
                                     Navigator.pop(context);
 
@@ -106,7 +106,7 @@ class LoginScreen extends StatelessWidget {
                                       ),
                                     );
                                   } else {
-                                    Provider.of<AuthProvider>(context, listen: false).setUser(user, context);
+                                    await Provider.of<AuthProvider>(context, listen: false).setUser(user, context);
                                     Navigator.pop(context);
                                   }
                                 },

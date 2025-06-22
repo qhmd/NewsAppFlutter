@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:newsapp/core/utils/AuthService.dart';
-import 'package:newsapp/presentation/state/BookmarkProvider.dart';
-import 'package:newsapp/presentation/state/AuthProviders.dart';
+import 'package:newsapp/presentation/screens/profile/option/list_bookmark.dart';
+import 'package:newsapp/presentation/state/auth_providers.dart';
 import 'package:provider/provider.dart';
 import 'package:settings_ui/settings_ui.dart';
 
@@ -40,17 +40,24 @@ class DataProfile extends StatelessWidget {
                     SettingsTile.navigation(
                       leading: Icon(Icons.person),
                       title: Text('Profile'),
-                      onPressed: (context) => print("Profile"),
+                      onPressed: (context) => debugPrint("Profile"),
                     ),
                     SettingsTile.navigation(
                       leading: Icon(Icons.bookmark_border_outlined),
                       title: Text('Bookmark'),
-                      onPressed: (context) => print("Bookmark"),
+                      onPressed: (context) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ListBookmark(),
+                          ),
+                        );
+                      },
                     ),
                     SettingsTile.navigation(
                       leading: Icon(Icons.book),
                       title: Text('Offline Reading'),
-                      onPressed: (context) => print("Offline"),
+                      onPressed: (context) => debugPrint("Offline"),
                     ),
                     SettingsTile.navigation(
                       leading: Icon(Icons.logout),
@@ -70,7 +77,7 @@ class DataProfile extends StatelessWidget {
   }
 
   Future<void> _dialogBuilder(BuildContext context) {
-    print("masuk disini");
+    debugPrint("masuk disini");
     final theme = Theme.of(context);
     return showDialog<void>(
       context: context,

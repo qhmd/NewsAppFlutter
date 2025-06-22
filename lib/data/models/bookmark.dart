@@ -23,4 +23,5 @@ class Bookmark extends HiveObject {
   String url;
 
   Bookmark({required this.id,required this.multimedia, required this.title, required this.source, required this.date, required this.url});
+
 }

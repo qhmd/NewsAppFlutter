@@ -9,14 +9,15 @@ class AuthProvider with ChangeNotifier {
   User? get user => _user;
   bool get isLoggedIn => _user != null;
 
-  void setUser(User? user, BuildContext context) async {
+  Future<void> setUser(User? user, BuildContext context) async {
     _user = user;
+    print("set user ${_user}");
     if (_user != null) {
       try {
-        print("ekseksi setuser");
+        debugPrint("ekseksi setuser");
         await _bookmarkService.syncFromCloud(_user!.uid);
       } catch (e) {
-        print("Offline - sync skipped");
+        debugPrint("Offline - sync skipped");
       }
     }
     notifyListeners();

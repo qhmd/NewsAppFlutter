@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:newsapp/presentation/screens/news/WebViewModal.dart';
+import 'package:newsapp/presentation/screens/news/web_view_modal.dart';
 
 void openWebViewModal(BuildContext context, String url) {
     final theme = Theme.of(context);

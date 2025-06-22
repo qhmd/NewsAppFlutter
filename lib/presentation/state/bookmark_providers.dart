@@ -1,5 +1,6 @@
 // BookmarkProvider.dart
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import '../../data/models/bookmark.dart';
 import '../../services/bookmark_service.dart';
 
@@ -7,14 +8,22 @@ class BookmarkProvider extends ChangeNotifier {
   final BookmarkService _service = BookmarkService();
   final Set<String> _bookmarkedIds = {};
   List<Bookmark> _bookmarks = [];
+  List<dynamic> _bookmarksHive = [];
 
-  List<Bookmark> get bookmarks => _bookmarks;
+  Future<dynamic> GetBox () async {
+    final box = await BookmarkService().getBox();
+    final all = box.values.toList();
+    return all;
+  }
+
+
+  List<Bookmark> get bookmark => _bookmarks;
+  List<dynamic> get bookmarksHive => _bookmarksHive;
+
+  // List<Bookmark> get bookmarks => _bookmarks;
 
   Future<void> loadFromLocal() async {
     _bookmarks = await _service.getAllLocalBookmarks();
-    _bookmarkedIds
-      ..clear()
-      ..addAll(_bookmarks.map((b) => b.id));
     notifyListeners();
   }
 

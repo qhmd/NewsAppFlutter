@@ -1,11 +1,12 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
-import 'package:newsapp/presentation/screens/profile/Profile.dart';
+import 'package:newsapp/presentation/screens/profile/profile.dart';
 
-import 'package:newsapp/presentation/state/AuthProviders.dart';
-import 'package:newsapp/presentation/state/BookmarkProvider.dart';
-import 'package:newsapp/presentation/state/ConnectionProvider.dart';
-import 'package:newsapp/presentation/state/NewsProvider.dart';
+import 'package:newsapp/presentation/state/auth_providers.dart';
+import 'package:newsapp/presentation/state/bookmark_providers.dart';
+import 'package:newsapp/presentation/state/connection_providers.dart';
+import 'package:newsapp/presentation/state/news_providers.dart';
+import 'package:newsapp/presentation/state/pageindex_providers.dart';
 
 import 'package:newsapp/core/theme/colors.dart';
 import 'package:newsapp/presentation/screens/inbox.dart';
@@ -16,6 +17,7 @@ import 'firebase_options.dart';
 import './data/models/bookmark.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:overlay_support/overlay_support.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Wajib untuk async main
@@ -32,8 +34,9 @@ void main() async {
         ChangeNotifierProvider(create: (_) => NewsProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),
+        ChangeNotifierProvider(create: (_) => PageIndexProvider()),
       ],
-      child: const MyApp(),
+      child: OverlaySupport(child: const MyApp()),
     ),
   );
 }
@@ -56,15 +59,15 @@ class _MyAppState extends State<MyApp> {
         try {
           context.read<AuthProvider>().setUser(user, context);
         } catch (e) {
-          print("errormain");
+          debugPrint("errormain");
         }
       } else {
         try {} catch (e) {
           context.read<AuthProvider>().clearUser();
-          print("errro mai nbw");
+          debugPrint("errro mai nbw");
         }
       }
-      print("isi user ${user}");
+      debugPrint("isi user ${user}");
     });
   }
 
@@ -111,24 +114,22 @@ class BottomNavigation extends StatefulWidget {
 }
 
 class _BottomNavigation extends State<BottomNavigation> {
-  int _selectedIndex = 0;
-
   final List<Widget> _pages = [HomeScreen(), Inbox(), Profile()];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
+    final currentIndex = context.watch<PageIndexProvider>().currentIndex;
+
+    void _onItemTapped(int index) {
+      context.read<PageIndexProvider>().changePage(index);
+    }
+
     final theme = Theme.of(context);
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: _pages[currentIndex],
       backgroundColor: theme.colorScheme.primaryContainer,
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
+        currentIndex: currentIndex,
         onTap: _onItemTapped,
         selectedItemColor: theme.colorScheme.primary,
         unselectedItemColor: Colors.grey,

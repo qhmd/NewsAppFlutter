@@ -1,15 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:newsapp/data/models/bookmark.dart';
 import 'package:newsapp/core/utils/urlConvert.dart';
-import 'package:newsapp/presentation/widget/bookmarkToast.dart';
+import 'package:newsapp/presentation/widget/bookmark_toast.dart';
 
 class BookmarkService {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   /// Mendapatkan instance Box, pastikan box sudah dibuka
-  Future<Box<Bookmark>> _getBox() async {
+  Future<Box<Bookmark>> getBox() async {
     const boxName = 'bookmarks';
 
     if (!Hive.isBoxOpen(boxName)) {
@@ -21,9 +22,22 @@ class BookmarkService {
 
   /// Menambahkan bookmark ke Hive dan Firebase
   Future<void> addBookmark(Bookmark bookmark, uid) async {
-    final box = await _getBox();
+    final box = await getBox();
     final id = encodeUrl(bookmark.url);
     await box.put(id, bookmark);
+    final saved = box.get(id);
+    if (saved != null) {
+      debugPrint('✅ Bookmark berhasil disimpan: ${saved.title}');
+    } else {
+      debugPrint('❌ Bookmark gagal disimpan.');
+    }
+
+    final all = box.values.toList();
+    debugPrint("📦 Isi bookmarkBox saat ini: ${all.length} item");
+    for (var item in all) {
+      debugPrint("- ${item.source}");
+    }
+
     if (uid != null) {
       await firestore
           .collection('users')
@@ -42,7 +56,7 @@ class BookmarkService {
 
   /// Menghapus bookmark dari Hive dan Firebase
   Future<void> removeBookmark(String id, uid) async {
-    final box = await _getBox();
+    final box = await getBox();
     await box.delete(id);
     if (uid != null) {
       await firestore
@@ -56,7 +70,7 @@ class BookmarkService {
 
   /// Mengambil semua bookmark dari Hive
   Future<List<Bookmark>> getAllLocalBookmarks() async {
-    final box = await _getBox();
+    final box = await getBox();
     return box.values.toList();
   }
 
@@ -70,7 +84,7 @@ class BookmarkService {
           .collection('bookmarks')
           .get();
 
-      final box = await _getBox();
+      final box = await getBox();
       await box.clear();
 
       for (var doc in snapshot.docs) {
@@ -87,13 +101,13 @@ class BookmarkService {
         await box.put(id, bookmark);
       }
     } catch (e) {
-      print('Gagal sync cloud (offline?): $e');
+      debugPrint('Gagal sync cloud (offline?): $e');
     }
   }
 
   /// Cek apakah bookmark sudah ada
   Future<bool> isBookmarked(String id) async {
-    final box = await _getBox();
+    final box = await getBox();
     return box.containsKey(id);
   }
 
@@ -107,7 +121,7 @@ class BookmarkService {
         await removeBookmark(id, uid);
         toastBookmark(context, false);
       } catch (e) {
-        print("gagal unbookmark ${e}");
+        debugPrint("gagal unbookmark ${e}");
       }
     } else {
       // await box.put(bookmark.url, bookmark);
@@ -115,7 +129,7 @@ class BookmarkService {
         await addBookmark(bookmark, uid);
         toastBookmark(context, true);
       } catch (e) {
-        print("gagal meyimpan bookamrk ${e}");
+        debugPrint("gagal meyimpan bookamrk ${e}");
       }
     }
   }

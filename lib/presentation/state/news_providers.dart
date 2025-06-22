@@ -19,16 +19,17 @@ class NewsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print(_offset);
+      print("isi offset ${_offset}");
       final newArticlesRaw = await getRandomNewsObj.fetchNews(_offset);
+      print("isi news article rat ${newArticlesRaw}");
       final newArticles = newArticlesRaw.where((item) => item.isValid).toList();
-      print("isi newArtikel ${newArticles.length}");
+      debugPrint("isi newArtikel ${newArticles.length}");
       _news.addAll(newArticles);
       _offset += 20;
       _hasMore = newArticlesRaw.length == 20;
-      print("dikesekusi $_hasMore");
+      debugPrint("dikesekusi $_hasMore");
     } catch (e) {
-      debugPrint('Error: $e');
+      debugPrint('Error fetch news: $e');
     } finally {
       _loading = false;
       notifyListeners();

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:newsapp/presentation/state/NewsProvider.dart';
+import 'package:newsapp/presentation/state/news_providers.dart';
 
 loaderNews(NewsProvider provider, bool isConnected) {
   if (!isConnected) {

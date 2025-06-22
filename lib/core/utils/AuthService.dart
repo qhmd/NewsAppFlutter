@@ -37,8 +37,8 @@ class AuthService {
       final user = userCredential.user;
       return user;
     } catch (e) {
-      // Print the error and return null if an exception occurs.
-      print("Sign-in error: $e");
+      // debugPrint the error and return null if an exception occurs.
+      debugPrint("Sign-in error: $e");
       return null;
     }
   }
@@ -51,19 +51,19 @@ class AuthService {
         final facebookAuthCredential = FacebookAuthProvider.credential(
           facebookUser.accessToken!.token,
         );
-        print("isi facebook user ${facebookAuthCredential}");
+        debugPrint("isi facebook user ${facebookAuthCredential}");
         final userCredential = await _auth.signInWithCredential(
           facebookAuthCredential,
         );
 
         return userCredential.user;
       } else {
-        print("lihat status ${facebookUser.status}");
+        debugPrint("lihat status ${facebookUser.status}");
       }
       // Sign in to Firebase with the Google credential.
     } catch (e) {
-      // Print the error and return null if an exception occurs.
-      print("Sign-in error: $e");
+      // debugPrint the error and return null if an exception occurs.
+      debugPrint("Sign-in error: $e");
       return null;
     }
     return null;
