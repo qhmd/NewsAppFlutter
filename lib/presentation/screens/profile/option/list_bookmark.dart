@@ -14,7 +14,7 @@ class ListBookmark extends StatelessWidget {
     return Consumer<BookmarkProvider>(
       builder: (context, provider, _) {
         final List<Bookmark> bookmarks = provider.bookmark;
-
+        print("ini dicetak gak");
         if (bookmarks.isEmpty) {
           return const Center(child: Text("Belum ada bookmark"));
         }

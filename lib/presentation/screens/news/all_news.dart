@@ -14,16 +14,29 @@ class AllNews extends StatefulWidget {
 
 class _AllNews extends State<AllNews> {
   final ScrollController _scrollController = ScrollController();
+  bool _previousConnectionState = false; // Track previous connection state
 
   @override
   void initState() {
     super.initState();
     print("✅ [AllNews] initState dijalankan");
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<ConnectionProvider>(context, listen: false);
-      debugPrint("${provider.isConnected}");
+      _previousConnectionState = provider.isConnected;
+      debugPrint("Initial connection state: ${provider.isConnected}");
     });
-    // Langsung fetch data saat awal
+    
+    // Langsung fetch data saat awal jika ada koneksi
+    final checkConnection = context.read<ConnectionProvider>().isConnected;
+    if (checkConnection) {
+      _fetchNewsData();
+      // Listener untuk load more
+      _scrollController.addListener(_handleScroll);
+    }
+  }
+
+  void _fetchNewsData() {
     Future.microtask(() async {
       try {
         print("🔍 Mencoba ambil NewsProvider...");
@@ -36,8 +49,6 @@ class _AllNews extends State<AllNews> {
         print(s);
       }
     });
-    // Listener untuk load more
-    _scrollController.addListener(_handleScroll);
   }
 
   void _handleScroll() {
@@ -53,10 +64,66 @@ class _AllNews extends State<AllNews> {
     }
   }
 
+  void _handleConnectionChange(bool isConnected) {
+    // Jika sebelumnya offline dan sekarang online, fetch data
+    if (!_previousConnectionState && isConnected) {
+      print("🌐 Koneksi restored! Fetching data...");
+      _fetchNewsData();
+      // Tambahkan scroll listener jika belum ada
+      if (!_scrollController.hasListeners) {
+        _scrollController.addListener(_handleScroll);
+      }
+    }
+    // Jika sekarang offline, hapus scroll listener untuk menghemat resource
+    else if (_previousConnectionState && !isConnected) {
+      print("📵 Koneksi terputus!");
+      if (_scrollController.hasListeners) {
+        _scrollController.removeListener(_handleScroll);
+      }
+    }
+    
+    _previousConnectionState = isConnected;
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    final isConnected = context.read<ConnectionProvider>().isConnected;
+    
+    if (!isConnected) {
+      print("📵 Tidak bisa refresh - tidak ada koneksi internet");
+      // Tampilkan snackbar atau toast untuk memberi tahu user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak ada koneksi internet'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+    
+    // Jika ada koneksi, lakukan refresh
+    try {
+      final provider = Provider.of<NewsProvider>(context, listen: false);
+      await provider.refreshRandom();
+      print("✅ Refresh berhasil");
+    } catch (e) {
+      print("❌ Error saat refresh: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal memuat ulang data'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -65,13 +132,16 @@ class _AllNews extends State<AllNews> {
     final isConnected = context.watch<ConnectionProvider>().isConnected;
     final newsList = provider.news;
 
+    // Handle connection state changes
+    _handleConnectionChange(isConnected);
+
     return NewsListSeparated(
       newsList: newsList,
       scrollController: _scrollController,
       isConnected: isConnected,
       hasMore: provider.hasMore,
       loading: provider.loading,
-      onRefresh: provider.refreshRandom,
+      onRefresh: _handleRefresh,
     );
   }
 }

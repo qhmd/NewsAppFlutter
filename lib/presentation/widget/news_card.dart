@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:newsapp/core/constants/formatted_date.dart';
 import 'package:newsapp/data/models/bookmark.dart';
+import 'package:newsapp/presentation/state/connection_providers.dart';
+import 'package:newsapp/presentation/widget/bookmark_toast.dart';
+import 'package:newsapp/presentation/widget/share_buttom_sheet.dart' hide SizedBox, Text;
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class NewsCard extends StatelessWidget {
   final Bookmark newsBookmarkList;
@@ -19,27 +24,20 @@ class NewsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    print("start here");
     final title = newsBookmarkList.title.isNotEmpty
         ? newsBookmarkList.title
         : "Tanpa Judul";
-    print(title);
     final source = newsBookmarkList.source.isNotEmpty
         ? newsBookmarkList.source
         : "Tanpa Sumber";
-    print(source);
     final datePublish = newsBookmarkList.date.isNotEmpty
         ? formatDate(newsBookmarkList.date)
         : "Tanggal tidak tersedia";
-    print(datePublish);
-    // final imageUrl = (newsBookmarkList.multimedia.isNotEmpty)
-    //     ? newsBookmarkList.multimedia
-    //     : null;
-    // print("🖼️ Apakah imageUrl null? ${imageUrl == null}");
-    // print("🖼️ Nilai imageUrl: '$imageUrl'");
-    // print("🖼️ Panjang string imageUrl: ${imageUrl.length}");
-    // print("🖼️ Apakah imageUrl kosong? ${imageUrl.trim().isEmpty}");
-
+    final imageUrl = newsBookmarkList.multimedia.isNotEmpty
+        ? newsBookmarkList.multimedia
+        : "Tanggal tidak tersedia";
+    print("isBookmarked ? ${isBookmarked}");
+    final isConnected = Provider.of<ConnectionProvider>(context).isConnected;
     return InkWell(
       onTap: onTap,
       child: Card(
@@ -50,22 +48,23 @@ class NewsCard extends StatelessWidget {
         color: theme.colorScheme.primaryContainer,
         child: Column(
           children: [
-            // ClipRRect(
-            //   borderRadius: const BorderRadius.vertical(
-            //     top: Radius.circular(12),
-            //   ),
-            //   child: imageUrl != null
-            //       ? Image.network(
-            //           imageUrl,
-            //           height: 130,
-            //           width: double.infinity,
-            //           fit: BoxFit.cover,
-            //           errorBuilder: (context, error, stackTrace) {
-            //             return _imagePlaceholder();
-            //           },
-            //         )
-            //       : _imagePlaceholder(),
-            // ),
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+
+              child: isConnected && imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      height: 130,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _imagePlaceholder();
+                      },
+                    )
+                  : _imagePlaceholder(),
+            ),
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
@@ -81,6 +80,7 @@ class NewsCard extends StatelessWidget {
                     ),
                   ),
                   Row(
+                    // mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Text(
@@ -88,15 +88,26 @@ class NewsCard extends StatelessWidget {
                           style: TextStyle(color: theme.colorScheme.onPrimary),
                         ),
                       ),
-                      IconButton(
-                        onPressed: onToggleBookmark,
-                        icon: Icon(
+                      GestureDetector(
+                        child: Icon(
                           isBookmarked
                               ? Icons.bookmark
                               : Icons.bookmark_outline,
                           color: isBookmarked ? Colors.red : Colors.grey,
                         ),
+                        onTap: () {
+                          onToggleBookmark();
+                        },
                       ),
+                      SizedBox(width: 10),
+
+                      GestureDetector(
+                        child: Icon(Icons.share_outlined, color: Colors.grey),
+                        onTap: () {
+                          shareButtomSheet(context,newsBookmarkList.url);
+                        },
+                      ),
+                      SizedBox(width: 5),
                     ],
                   ),
                 ],

@@ -8,6 +8,7 @@ import 'package:newsapp/presentation/state/connection_providers.dart';
 import 'package:newsapp/presentation/state/news_providers.dart';
 import 'package:newsapp/presentation/state/pageindex_providers.dart';
 
+
 import 'package:newsapp/core/theme/colors.dart';
 import 'package:newsapp/presentation/screens/inbox.dart';
 import 'package:provider/provider.dart';
@@ -52,7 +53,15 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-
+    final ConnectProv = context.read<ConnectionProvider>();
+    if (!ConnectProv.isConnected) {
+        context.read<BookmarkProvider>().loadFromLocal();
+    } else {
+      final AuthInfo = context.read<AuthProvider>();
+      if (AuthInfo.isLoggedIn) {
+        context.read<BookmarkProvider>().syncFromCloud(AuthInfo.user!.uid);
+      }
+    }
     // Pindahkan listener ke sini
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (user != null) {
@@ -64,9 +73,9 @@ class _MyAppState extends State<MyApp> {
       } else {
         try {} catch (e) {
           context.read<AuthProvider>().clearUser();
-          debugPrint("errro mai nbw");
         }
       }
+      context.read<BookmarkProvider>().syncFromCloud(user!.uid);
       debugPrint("isi user ${user}");
     });
   }

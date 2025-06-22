@@ -6,9 +6,8 @@ import 'package:newsapp/presentation/state/auth_providers.dart';
 import 'package:provider/provider.dart';
 import 'package:settings_ui/settings_ui.dart';
 
-// Define a stateless widget for the DataProfile
+
 class DataProfile extends StatelessWidget {
-  // Firebase User object to hold user details
   final User user;
 
   DataProfile({super.key, required this.user});
@@ -23,9 +22,8 @@ class DataProfile extends StatelessWidget {
           CircleAvatar(
             backgroundImage: user.photoURL != null && user.photoURL!.isNotEmpty
                 ? NetworkImage(user.photoURL!)
-                : AssetImage('assets/images/default_avatar.png')
-                      as ImageProvider,
-            radius: 40,
+                : AssetImage('assets/images/default_avatar.png') as ImageProvider,
+            radius: 50,
           ),
           SizedBox(height: 10),
           Text("Email: ${user.email}"),

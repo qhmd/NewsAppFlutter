@@ -23,11 +23,10 @@ class BookmarkService {
   /// Menambahkan bookmark ke Hive dan Firebase
   Future<void> addBookmark(Bookmark bookmark, uid) async {
     final box = await getBox();
-    final id = encodeUrl(bookmark.url);
-    await box.put(id, bookmark);
-    final saved = box.get(id);
+    await box.put(bookmark.id, bookmark);
+    final saved = box.get(bookmark.id);
     if (saved != null) {
-      debugPrint('✅ Bookmark berhasil disimpan: ${saved.title}');
+      debugPrint('✅ Bookmark berhasil disimpan: ${bookmark.id}');
     } else {
       debugPrint('❌ Bookmark gagal disimpan.');
     }
@@ -43,7 +42,7 @@ class BookmarkService {
           .collection('users')
           .doc(uid)
           .collection('bookmarks')
-          .doc(id)
+          .doc(bookmark.id)
           .set({
             'urlPicture': bookmark.multimedia,
             'title': bookmark.title,
@@ -97,8 +96,7 @@ class BookmarkService {
           date: data['uploadDate'] ?? '',
           url: data['urlNews'] ?? '',
         );
-        final id = encodeUrl(bookmark.id);
-        await box.put(id, bookmark);
+        await box.put(bookmark.id, bookmark);
       }
     } catch (e) {
       debugPrint('Gagal sync cloud (offline?): $e');
@@ -111,7 +109,6 @@ class BookmarkService {
     return box.containsKey(id);
   }
 
-  /// Toggle bookmark → jika belum ada, tambahkan. Jika ada, hapus.
   Future<void> toggleBookmark(Bookmark bookmark, uid, context) async {
     final id = encodeUrl(bookmark.url);
     final bookmarked = await isBookmarked(id);

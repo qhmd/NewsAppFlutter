@@ -1,6 +1,8 @@
 // BookmarkProvider.dart
+import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
+import 'package:newsapp/core/utils/urlConvert.dart';
 import '../../data/models/bookmark.dart';
 import '../../services/bookmark_service.dart';
 
@@ -8,22 +10,26 @@ class BookmarkProvider extends ChangeNotifier {
   final BookmarkService _service = BookmarkService();
   final Set<String> _bookmarkedIds = {};
   List<Bookmark> _bookmarks = [];
-  List<dynamic> _bookmarksHive = [];
+  List<String> _bookmarksIdss = [];
 
-  Future<dynamic> GetBox () async {
+  Future<dynamic> GetBox() async {
     final box = await BookmarkService().getBox();
     final all = box.values.toList();
     return all;
   }
 
-
   List<Bookmark> get bookmark => _bookmarks;
-  List<dynamic> get bookmarksHive => _bookmarksHive;
+  List<String> get debugBookmarkedIds => _bookmarkedIds.toList();
 
   // List<Bookmark> get bookmarks => _bookmarks;
 
   Future<void> loadFromLocal() async {
     _bookmarks = await _service.getAllLocalBookmarks();
+    _bookmarkedIds.clear();
+    print("isi b adalah ${_bookmarks.map((b) => b.id)}");
+    _bookmarkedIds.addAll(_bookmarks.map((b) => b.id));
+    ;
+    _bookmarksIdss = debugBookmarkedIds;
     notifyListeners();
   }
 
@@ -35,8 +41,14 @@ class BookmarkProvider extends ChangeNotifier {
   bool isBookmarked(String id) => _bookmarkedIds.contains(id);
 
   Future<void> toggleBookmark(Bookmark b, String uid, context) async {
+    b.id = encodeUrl(b.id);
+    print("isi id $b.id");
     await _service.toggleBookmark(b, uid, context);
+    if (_bookmarkedIds.contains(b.id)) {
+      _bookmarkedIds.remove(b.id);
+    } else {
+      _bookmarkedIds.add(b.id);
+    }
     await loadFromLocal();
   }
 }
-

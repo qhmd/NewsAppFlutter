@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:newsapp/presentation/widget/bookmark_toast.dart';
 
 class News {
   final String section;
@@ -69,6 +70,7 @@ class NewsService {
         final List<dynamic> results = data['results'];
         return results.map((item) => News.fromJson(item)).toList();
       } else if (response.statusCode == 429) {
+        showCustomToast("API limit exceeded. Try again later");
         throw Exception('API limit exceeded. Try again later.');
       } else {
         throw Exception('Failed to load news: Status ${response.statusCode}');

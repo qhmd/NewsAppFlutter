@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:newsapp/core/utils/internetAcces.dart';
+import 'package:newsapp/presentation/widget/bookmark_toast.dart';
 
 class ConnectionProvider with ChangeNotifier {
-  bool _isConnected = true;
+  bool _isConnected = false;
   late StreamSubscription _subscription;
 
   bool get isConnected => _isConnected;
@@ -14,23 +14,34 @@ class ConnectionProvider with ChangeNotifier {
     _initConnectivity();
   }
 
-  void _initConnectivity() async {
-    // Cek awal
-    _isConnected = await hasInternetAccess();
-    notifyListeners();
+  Future<void> _checkInternet() async {
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      final isDeviceConnected = connectivityResult[0] != ConnectivityResult.none;
+      final hasInternet = isDeviceConnected ? await hasInternetAccess() : false;
 
-    // Dengarkan perubahan koneksi
-    _subscription = Connectivity().onConnectivityChanged.listen((_) async {
-      final hasInternet = await hasInternetAccess();
+      // Hanya update jika status berubah
       if (hasInternet != _isConnected) {
         _isConnected = hasInternet;
         notifyListeners();
+
+        // Tampilkan notifikasi hanya jika benar-benar berubah
+        if (!_isConnected) {
+          showCustomToast(isDeviceConnected ? "No internet access" : "You're offline");
+        } else {
+          showCustomToast("Back online!");
+        }
       }
-    });
+    } catch (e) {
+      debugPrint("Connection error: $e");
+      _isConnected = false;
+      notifyListeners();
+    }
   }
 
-  void disposeStream() {
-    _subscription.cancel();
+  void _initConnectivity() async {
+    await _checkInternet(); // Cek status awal
+    _subscription = Connectivity().onConnectivityChanged.listen((_) => _checkInternet());
   }
 
   @override
