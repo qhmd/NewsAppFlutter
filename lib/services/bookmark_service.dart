@@ -106,32 +106,15 @@ class BookmarkService {
     return box.containsKey(id);
   }
 
-  Future<void> toggleBookmark(Bookmark bookmark, uid, context) async {
-    final id = encodeUrl(bookmark.url);
-    final bookmarked = await isBookmarked(id);
+  Future<void> toggleBookmark(Bookmark bookmark, String uid) async {
+  final id = encodeUrl(bookmark.url);
+  final bookmarked = await isBookmarked(id);
 
-    if (bookmarked) {
-      try {
-        await removeBookmark(id, uid);
-
-        toastBookmark(context, false);
-      } catch (e) {
-        debugPrint("gagal unbookmark ${e}");
-      }
-    } else {
-      // await box.put(bookmark.url, bookmark);
-      try {
-        await addBookmark(bookmark, uid);
-        toastBookmark(context, true);
-        final box = await getBox();
-        final all = box.values.toList();
-        debugPrint("📦 Isi bookmarkBox saat di add: ${all.length} item");
-        for (var item in all) {
-          debugPrint(" tesss - ${item.id}");
-        }
-      } catch (e) {
-        debugPrint("gagal meyimpan bookamrk ${e}");
-      }
-    }
+  if (bookmarked) {
+    await removeBookmark(id, uid);
+  } else {
+    await addBookmark(bookmark, uid);
   }
+}
+
 }

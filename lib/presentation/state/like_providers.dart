@@ -72,4 +72,10 @@ class LikeProvider with ChangeNotifier {
       // ❗ Kalau mau, di sini kamu bisa rollback state
     }
   }
+  void clear() {
+    _likeStatus.clear();
+    _likeCount.clear();
+    notifyListeners();
+  }
+
 }

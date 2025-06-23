@@ -1,10 +1,14 @@
 import 'dart:ffi';
 
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:newsapp/core/constants/Api/news.dart';
 import 'package:newsapp/core/constants/formatted_date.dart';
 import 'package:newsapp/data/models/bookmark.dart';
+import 'package:newsapp/presentation/state/auth_providers.dart';
+import 'package:newsapp/presentation/state/bookmark_providers.dart';
 import 'package:newsapp/presentation/state/connection_providers.dart';
+import 'package:newsapp/presentation/state/pageindex_providers.dart';
 import 'package:newsapp/presentation/widget/bookmark_toast.dart';
 import 'package:newsapp/presentation/widget/like.dart';
 import 'package:newsapp/presentation/widget/share_buttom_sheet.dart'
@@ -15,14 +19,10 @@ import 'package:share_plus/share_plus.dart';
 class NewsCard extends StatelessWidget {
   final Bookmark newsBookmarkList;
   final VoidCallback onTap;
-  final VoidCallback onToggleBookmark;
-  final bool isBookmarked;
 
   const NewsCard({
     required this.newsBookmarkList,
     required this.onTap,
-    required this.onToggleBookmark,
-    required this.isBookmarked,
     super.key,
   });
 
@@ -41,7 +41,6 @@ class NewsCard extends StatelessWidget {
     final imageUrl = newsBookmarkList.multimedia.isNotEmpty
         ? newsBookmarkList.multimedia
         : "Tanggal tidak tersedia";
-    print("isBookmarked ? ${isBookmarked}");
     final isConnected = Provider.of<ConnectionProvider>(context).isConnected;
     return InkWell(
       onTap: onTap,
@@ -100,9 +99,7 @@ class NewsCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          SizedBox(
-                            width: 20,
-                          ),
+                          SizedBox(width: 20),
                           Like(newsUrl: newsBookmarkList.url),
                           SizedBox(width: 35),
                           GestureDetector(
@@ -119,17 +116,46 @@ class NewsCard extends StatelessWidget {
                       ),
                       Row(
                         children: [
-                          GestureDetector(
-                            child: Icon(
-                              isBookmarked
-                                  ? Icons.bookmark
-                                  : Icons.bookmark_outline,
-                              color: isBookmarked ? Colors.red : Colors.grey,
-                            ),
-                            onTap: () {
-                              onToggleBookmark();
+                          Consumer<BookmarkProvider>(
+                            builder: (context, bookmarkProvider, _) {
+                              final isBookmarkedNow = bookmarkProvider
+                                  .isBookmarked(newsBookmarkList.id);
+                              final uid = context
+                                  .read<AuthProvider>()
+                                  .user
+                                  ?.uid;
+
+                              return GestureDetector(
+                                child: Icon(
+                                  isBookmarkedNow
+                                      ? Icons.bookmark
+                                      : Icons.bookmark_outline,
+                                  color: isBookmarkedNow
+                                      ? Colors.red
+                                      : Colors.grey,
+                                ),
+                                onTap: () {
+                                  if (uid == null) {
+                                    final toProfile = context.read<PageIndexProvider>();
+                                    showCustomToast("You have to login first");
+                                    toProfile.changePage(2);
+                                    return;
+                                  }
+                                  
+                                  bookmarkProvider.toggleBookmark(
+                                    newsBookmarkList,
+                                    uid,
+                                    context,
+                                  );
+                                  toastBookmark(
+                                    context,
+                                    !isBookmarkedNow,
+                                  ); // opsional notifikasi
+                                },
+                              );
                             },
                           ),
+
                           SizedBox(width: 10),
 
                           GestureDetector(
@@ -142,9 +168,7 @@ class NewsCard extends StatelessWidget {
                               shareButtomSheet(context, newsBookmarkList);
                             },
                           ),
-                          SizedBox(
-                            width: 14,
-                          ),
+                          SizedBox(width: 14),
                         ],
                       ),
                     ],

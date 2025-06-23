@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:newsapp/services/bookmark_service.dart';
@@ -5,6 +6,8 @@ import 'package:newsapp/services/bookmark_service.dart';
 class AuthProvider with ChangeNotifier {
   User? _user;
   final BookmarkService _bookmarkService = BookmarkService();
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
 
   User? get user => _user;
   bool get isLoggedIn => _user != null;

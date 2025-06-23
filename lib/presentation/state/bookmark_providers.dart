@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:newsapp/core/utils/urlConvert.dart';
+import 'package:newsapp/presentation/widget/bookmark_toast.dart';
 import '../../data/models/bookmark.dart';
 import '../../services/bookmark_service.dart';
 
@@ -40,14 +41,39 @@ class BookmarkProvider extends ChangeNotifier {
   bool isBookmarked(String id) => _bookmarkedIds.contains(id);
 
   Future<void> toggleBookmark(Bookmark b, String uid, context) async {
-    // b.id = encodeUrl(b.id);
-    print("isi id di toggle${b.id}");
-    await _service.toggleBookmark(b, uid, context);
-    if (_bookmarkedIds.contains(b.id)) {
+    final isAlreadyBookmarked = _bookmarkedIds.contains(b.id);
+
+    if (isAlreadyBookmarked) {
       _bookmarkedIds.remove(b.id);
+      _bookmarks.removeWhere((item) => item.id == b.id);
     } else {
       _bookmarkedIds.add(b.id);
+      _bookmarks.add(b);
     }
-    await loadFromLocal();
+
+    notifyListeners();
+
+    // Sync ke layanan (Hive + Firestore)
+    try {
+      await _service.toggleBookmark(b, uid);
+    } catch (e) {
+      // ❗ rollback jika perlu
+      print("Error syncing bookmark: $e");
+
+      // Opsional: rollback
+      if (isAlreadyBookmarked) {
+        _bookmarkedIds.add(b.id);
+        _bookmarks.add(b);
+      } else {
+        _bookmarkedIds.remove(b.id);
+        _bookmarks.removeWhere((item) => item.id == b.id);
+      }
+      notifyListeners(); // update lagi
+    }
+  }
+  void clear() {
+    _bookmarkedIds.clear();
+    _bookmarks.clear();
+    notifyListeners();
   }
 }

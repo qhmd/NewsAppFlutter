@@ -114,31 +114,11 @@ class NewsListSeparated extends StatelessWidget {
 
           final item = newsList[index];
           final bookmark = _bookmark(item);
-          print("ini url nya ${bookmark.url}");
-          final hasilEncode = encodeUrl(bookmark.url);
-          print("ini hasil encode nya ${hasilEncode}");
-          final isBookmarked = context.watch<BookmarkProvider>().isBookmarked(
-            hasilEncode,
-          );
           return Material(
             color: Colors.transparent,
             child: NewsCard(
               newsBookmarkList: bookmark,
-              isBookmarked: isBookmarked,
               onTap: () => openWebViewModal(context, item.url),
-              onToggleBookmark: () {
-                final auth = context.read<AuthProvider>();
-                if (!auth.isLoggedIn) {
-                  context.read<PageIndexProvider>().changePage(2);
-                  showCustomToast("Silahkan Login terlebih dahulu");
-                  return;
-                }
-                context.read<BookmarkProvider>().toggleBookmark(
-                  bookmark,
-                  auth.user!.uid,
-                  context,
-                );
-              },
             ),
           );
         },

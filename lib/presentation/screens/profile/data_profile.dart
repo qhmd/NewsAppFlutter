@@ -1,11 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:newsapp/core/utils/AuthService.dart';
+import 'package:newsapp/data/models/bookmark.dart';
 import 'package:newsapp/presentation/screens/profile/option/list_bookmark.dart';
 import 'package:newsapp/presentation/state/auth_providers.dart';
+import 'package:newsapp/presentation/state/bookmark_providers.dart';
+import 'package:newsapp/presentation/state/like_providers.dart';
 import 'package:provider/provider.dart';
 import 'package:settings_ui/settings_ui.dart';
-
 
 class DataProfile extends StatelessWidget {
   final User user;
@@ -22,7 +25,8 @@ class DataProfile extends StatelessWidget {
           CircleAvatar(
             backgroundImage: user.photoURL != null && user.photoURL!.isNotEmpty
                 ? NetworkImage(user.photoURL!)
-                : AssetImage('assets/images/default_avatar.png') as ImageProvider,
+                : AssetImage('assets/images/default_avatar.png')
+                      as ImageProvider,
             radius: 50,
           ),
           SizedBox(height: 10),
@@ -112,6 +116,12 @@ class DataProfile extends StatelessWidget {
                 );
                 await AuthService().signOut();
                 authProvider.clearUser();
+                await FirebaseAuth.instance.signOut();
+                Provider.of<BookmarkProvider>(context, listen: false).clear();
+                Provider.of<LikeProvider>(context, listen: false).clear();
+                final box = await Hive.openBox<Bookmark>('bookmarks');
+                await box.clear();
+
                 Navigator.pop(context);
               },
             ),
