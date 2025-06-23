@@ -1,9 +1,14 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
+import 'package:newsapp/core/constants/Api/news.dart';
 import 'package:newsapp/core/constants/formatted_date.dart';
 import 'package:newsapp/data/models/bookmark.dart';
 import 'package:newsapp/presentation/state/connection_providers.dart';
 import 'package:newsapp/presentation/widget/bookmark_toast.dart';
-import 'package:newsapp/presentation/widget/share_buttom_sheet.dart' hide SizedBox, Text;
+import 'package:newsapp/presentation/widget/like.dart';
+import 'package:newsapp/presentation/widget/share_buttom_sheet.dart'
+    hide SizedBox, Text;
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -80,7 +85,6 @@ class NewsCard extends StatelessWidget {
                     ),
                   ),
                   Row(
-                    // mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Text(
@@ -88,27 +92,61 @@ class NewsCard extends StatelessWidget {
                           style: TextStyle(color: theme.colorScheme.onPrimary),
                         ),
                       ),
-                      GestureDetector(
-                        child: Icon(
-                          isBookmarked
-                              ? Icons.bookmark
-                              : Icons.bookmark_outline,
-                          color: isBookmarked ? Colors.red : Colors.grey,
-                        ),
-                        onTap: () {
-                          onToggleBookmark();
-                        },
+                    ],
+                  ),
+                  SizedBox(height: 15),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 20,
+                          ),
+                          Like(newsUrl: newsBookmarkList.url),
+                          SizedBox(width: 35),
+                          GestureDetector(
+                            child: Icon(
+                              Icons.share_outlined,
+                              color: Colors.grey,
+                            ),
+                            onTap: () {
+                              print("di news card ${newsBookmarkList.id}");
+                              shareButtomSheet(context, newsBookmarkList);
+                            },
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 10),
+                      Row(
+                        children: [
+                          GestureDetector(
+                            child: Icon(
+                              isBookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_outline,
+                              color: isBookmarked ? Colors.red : Colors.grey,
+                            ),
+                            onTap: () {
+                              onToggleBookmark();
+                            },
+                          ),
+                          SizedBox(width: 10),
 
-                      GestureDetector(
-                        child: Icon(Icons.share_outlined, color: Colors.grey),
-                        onTap: () {
-                          print("di news card ${newsBookmarkList.id}");
-                          shareButtomSheet(context, newsBookmarkList);
-                        },
+                          GestureDetector(
+                            child: Icon(
+                              Icons.share_outlined,
+                              color: Colors.grey,
+                            ),
+                            onTap: () {
+                              print("di news card ${newsBookmarkList.id}");
+                              shareButtomSheet(context, newsBookmarkList);
+                            },
+                          ),
+                          SizedBox(
+                            width: 14,
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 5),
                     ],
                   ),
                 ],

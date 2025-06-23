@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:newsapp/presentation/screens/news/list_news.dart';
+import 'package:newsapp/presentation/state/like_providers.dart';
 import 'package:provider/provider.dart';
 import 'package:newsapp/presentation/state/news_providers.dart';
 import 'dart:async';
@@ -20,13 +21,13 @@ class _AllNews extends State<AllNews> {
   void initState() {
     super.initState();
     print("✅ [AllNews] initState dijalankan");
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<ConnectionProvider>(context, listen: false);
       _previousConnectionState = provider.isConnected;
       debugPrint("Initial connection state: ${provider.isConnected}");
     });
-    
+
     // Langsung fetch data saat awal jika ada koneksi
     final checkConnection = context.read<ConnectionProvider>().isConnected;
     if (checkConnection) {
@@ -81,7 +82,7 @@ class _AllNews extends State<AllNews> {
         _scrollController.removeListener(_handleScroll);
       }
     }
-    
+
     _previousConnectionState = isConnected;
   }
 
@@ -93,7 +94,7 @@ class _AllNews extends State<AllNews> {
 
   Future<void> _handleRefresh() async {
     final isConnected = context.read<ConnectionProvider>().isConnected;
-    
+
     if (!isConnected) {
       print("📵 Tidak bisa refresh - tidak ada koneksi internet");
       // Tampilkan snackbar atau toast untuk memberi tahu user
@@ -107,7 +108,7 @@ class _AllNews extends State<AllNews> {
       }
       return;
     }
-    
+
     // Jika ada koneksi, lakukan refresh
     try {
       final provider = Provider.of<NewsProvider>(context, listen: false);
@@ -129,9 +130,15 @@ class _AllNews extends State<AllNews> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<NewsProvider>(context);
-    final isConnected = context.watch<ConnectionProvider>().isConnected;
     final newsList = provider.news;
-
+    final isConnected = context.watch<ConnectionProvider>().isConnected;
+    
+    Future.microtask(() {
+      final likeProvider = Provider.of<LikeProvider>(context, listen: false);
+      for (var news in newsList) {
+        likeProvider.fetchLikeStatus(news.url);
+      }
+    });
     // Handle connection state changes
     _handleConnectionChange(isConnected);
 

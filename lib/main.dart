@@ -5,6 +5,7 @@ import 'package:newsapp/presentation/screens/profile/profile.dart';
 import 'package:newsapp/presentation/state/auth_providers.dart';
 import 'package:newsapp/presentation/state/bookmark_providers.dart';
 import 'package:newsapp/presentation/state/connection_providers.dart';
+import 'package:newsapp/presentation/state/like_providers.dart';
 import 'package:newsapp/presentation/state/news_providers.dart';
 import 'package:newsapp/presentation/state/pageindex_providers.dart';
 
@@ -36,6 +37,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),
         ChangeNotifierProvider(create: (_) => PageIndexProvider()),
+        ChangeNotifierProvider(create: (_) => LikeProvider()),
       ],
       child: OverlaySupport(child: const MyApp()),
     ),
@@ -75,9 +77,8 @@ class _MyAppState extends State<MyApp> {
           context.read<AuthProvider>().clearUser();
         }
       }
-      context.read<BookmarkProvider>().syncFromCloud(user!.uid);
-      debugPrint("isi user ${user}");
     });
+    
   }
 
   Widget build(BuildContext context) {

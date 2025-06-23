@@ -1,114 +1,88 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_social_button/flutter_social_button.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:like_button/like_button.dart';
 
-class Inbox extends StatelessWidget {
-  const Inbox({super.key});
-
-  void _launchUrl(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      throw 'Tidak dapat membuka $url';
-    }
-  }
+class Inbox extends StatefulWidget {
+  const Inbox({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    final String messageText = Uri.encodeComponent("Halo, saya tertarik dengan produk Anda");
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Social Login Buttons"),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              const SizedBox(width: 30),
-              _SocialItem(
-                button: FlutterSocialButton(
-                  onTap: () => _launchUrl("https://wa.me/?text=$messageText"),
-                  mini: true,
-                  showLabel: true,
-                  buttonType: ButtonType.whatsapp,
-                ),
-                label: 'WhatsApp',
-              ),
-              const SizedBox(width: 30),
-              _SocialItem(
-                button: FlutterSocialButton(
-                  onTap: () => _launchUrl("mailto:example@email.com?subject=Pertanyaan&body=$messageText"),
-                  mini: true,
-                  title: 'Email',
-                ),
-                label: 'Email',
-              ),
-              const SizedBox(width: 30),
-              _SocialItem(
-                button: FlutterSocialButton(
-                  onTap: () => _launchUrl("https://www.tiktok.com/@username"),
-                  mini: true,
-                  showLabel: true,
-                  buttonType: ButtonType.tiktok,
-                ),
-                label: 'Pesan\nTikTok',
-              ),
-              const SizedBox(width: 30),
-              _SocialItem(
-                button: FlutterSocialButton(
-                  onTap: () => _launchUrl("https://www.instagram.com/qhmd_22"),
-                  mini: true,
-                  showLabel: true,
-                  buttonType: ButtonType.instagram,
-                ),
-                label: 'Pesan\nInstagram',
-              ),
-              const SizedBox(width: 30),
-              _SocialItem(
-                button: FlutterSocialButton(
-                  onTap: () => _launchUrl("https://line.me/R/msg/text/?$messageText"),
-                  mini: true,
-                  showLabel: true,
-                  buttonType: ButtonType.line,
-                ),
-                label: 'Line',
-              ),
-              const SizedBox(width: 30),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  State<Inbox> createState() => _InboxState();
 }
 
-class _SocialItem extends StatelessWidget {
-  final Widget button;
-  final String label;
-
-  const _SocialItem({required this.button, required this.label});
+class _InboxState extends State<Inbox> {
+  final double buttonSize = 30.0;
+  final int LoveCount = 0;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        button,
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 30,
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 12),
-            textAlign: TextAlign.center,
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Inbox'),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Inbox Page',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 40),
+            
+            // LikeButton Implementation
+            LikeButton(
+              size: buttonSize,
+              circleColor: const CircleColor(
+                start: Color.fromARGB(255, 241, 45, 75), 
+                end: Color.fromARGB(255, 239, 28, 28)
+              ),
+              bubblesColor: const BubblesColor(
+                dotPrimaryColor: Color.fromARGB(255, 238, 28, 25),
+                dotSecondaryColor: Color.fromARGB(255, 255, 255, 255),
+              ),
+              likeBuilder: (bool isLiked) {
+                return Icon(
+                  Icons.favorite,
+                  color: isLiked ? Colors.red : Colors.grey,
+                  size: buttonSize,
+                );
+              },
+              likeCount: LoveCount,
+              countBuilder: (int? count, bool isLiked, String text) {
+                var color = isLiked ? Colors.red : Colors.grey;
+                Widget result;
+                if (count == 0 || count == null) {
+                  result = Text(
+                    "0",
+                    style: TextStyle(color: color),
+                  );
+                } else {
+                  result = Text(
+                    text,
+                    style: TextStyle(color: color),
+                  );
+                }
+                return result;
+              },
+            ),
+            
+            const SizedBox(height: 20),
+            const Text(
+              'Tap the home icon above to like!',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
