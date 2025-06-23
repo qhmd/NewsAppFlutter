@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_social_button/flutter_social_button.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:newsapp/presentation/widget/bookmark_toast.dart';
 
 class AppIcon extends StatelessWidget {
   final url;
@@ -16,6 +17,20 @@ class AppIcon extends StatelessWidget {
       throw 'Tidak dapat membuka $url';
     }
   }
+
+  void launchEmail(String url) async {
+  final Uri emailUri = Uri.parse(
+    "mailto:example@email.com?subject=News&body=${url}",
+  );
+
+  try {
+    if (!await launchUrl(emailUri)) {
+      showCustomToast("Tidak dapat membuka email.");
+    }
+  } catch (e) {
+    showCustomToast("Coming Soon");
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -41,9 +56,7 @@ class AppIcon extends StatelessWidget {
             _SocialItem(
               button: FlutterSocialButton(
                 onTap: () {
-                  _launchUrl(
-                    "mailto:example@email.com?subject=Pertanyaan&body=Halo%2C%20saya%20ingin%20bertanya",
-                  );
+                  launchEmail(url);
                 },
                 mini: true,
                 title: 'Email',

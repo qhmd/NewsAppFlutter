@@ -40,7 +40,7 @@ class NewsListSeparated extends StatelessWidget {
       id: item.url,
       title: item.title,
       source: item.byline ?? '',
-      multimedia: item.multimedia[2]?['url'] ?? '',
+      multimedia: item.multimedia?[2]?['url'] ?? '',
       date: item.published_date,
       url: item.url,
     );

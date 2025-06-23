@@ -26,9 +26,8 @@ class BookmarkProvider extends ChangeNotifier {
   Future<void> loadFromLocal() async {
     _bookmarks = await _service.getAllLocalBookmarks();
     _bookmarkedIds.clear();
-    print("isi b adalah ${_bookmarks.map((b) => b.id)}");
     _bookmarkedIds.addAll(_bookmarks.map((b) => b.id));
-    ;
+    print("isi b adalah ${_bookmarkedIds.toList()}");
     _bookmarksIdss = debugBookmarkedIds;
     notifyListeners();
   }
@@ -41,8 +40,8 @@ class BookmarkProvider extends ChangeNotifier {
   bool isBookmarked(String id) => _bookmarkedIds.contains(id);
 
   Future<void> toggleBookmark(Bookmark b, String uid, context) async {
-    b.id = encodeUrl(b.id);
-    print("isi id $b.id");
+    // b.id = encodeUrl(b.id);
+    print("isi id di toggle${b.id}");
     await _service.toggleBookmark(b, uid, context);
     if (_bookmarkedIds.contains(b.id)) {
       _bookmarkedIds.remove(b.id);

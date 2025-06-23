@@ -22,27 +22,23 @@ class BookmarkService {
 
   /// Menambahkan bookmark ke Hive dan Firebase
   Future<void> addBookmark(Bookmark bookmark, uid) async {
+    final bId = encodeUrl(bookmark.id);
     final box = await getBox();
-    await box.put(bookmark.id, bookmark);
-    final saved = box.get(bookmark.id);
-    if (saved != null) {
-      debugPrint('✅ Bookmark berhasil disimpan: ${bookmark.id}');
-    } else {
-      debugPrint('❌ Bookmark gagal disimpan.');
-    }
+    final normalizedBookmark = bookmark.copyWith(
+      id: bId,
+    ); // 👈 ubah id Bookmark-nya
 
-    final all = box.values.toList();
-    debugPrint("📦 Isi bookmarkBox saat ini: ${all.length} item");
-    for (var item in all) {
-      debugPrint("- ${item.source}");
-    }
+    await box.put(bId, normalizedBookmark);
+
+    print("isi bookmark id ${bId}");
+    final saved = box.get(bId);
 
     if (uid != null) {
       await firestore
           .collection('users')
           .doc(uid)
           .collection('bookmarks')
-          .doc(bookmark.id)
+          .doc(bId)
           .set({
             'urlPicture': bookmark.multimedia,
             'title': bookmark.title,
@@ -96,6 +92,7 @@ class BookmarkService {
           date: data['uploadDate'] ?? '',
           url: data['urlNews'] ?? '',
         );
+        print("isi id saat lpoad ${bookmark.id}");
         await box.put(bookmark.id, bookmark);
       }
     } catch (e) {
@@ -116,6 +113,7 @@ class BookmarkService {
     if (bookmarked) {
       try {
         await removeBookmark(id, uid);
+
         toastBookmark(context, false);
       } catch (e) {
         debugPrint("gagal unbookmark ${e}");
@@ -125,6 +123,12 @@ class BookmarkService {
       try {
         await addBookmark(bookmark, uid);
         toastBookmark(context, true);
+        final box = await getBox();
+        final all = box.values.toList();
+        debugPrint("📦 Isi bookmarkBox saat di add: ${all.length} item");
+        for (var item in all) {
+          debugPrint(" tesss - ${item.id}");
+        }
       } catch (e) {
         debugPrint("gagal meyimpan bookamrk ${e}");
       }

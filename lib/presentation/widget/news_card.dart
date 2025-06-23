@@ -104,7 +104,8 @@ class NewsCard extends StatelessWidget {
                       GestureDetector(
                         child: Icon(Icons.share_outlined, color: Colors.grey),
                         onTap: () {
-                          shareButtomSheet(context,newsBookmarkList.url);
+                          print("di news card ${newsBookmarkList.id}");
+                          shareButtomSheet(context, newsBookmarkList);
                         },
                       ),
                       SizedBox(width: 5),
