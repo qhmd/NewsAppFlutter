@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:newsapp/core/utils/urlConvert.dart';
 
-class CommentService {
+class CommentService with ChangeNotifier{
   final _firestore = FirebaseFirestore.instance;
 
   Future<void> addComment({
@@ -36,7 +37,6 @@ class CommentService {
             'fromUser': userName,
             'newsUrl': newsUrl,
             'message': message,
-            'seen': false,
             'createdAt': FieldValue.serverTimestamp(),
           });
     }

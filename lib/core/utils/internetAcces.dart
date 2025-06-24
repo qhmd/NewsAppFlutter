@@ -9,20 +9,21 @@ Future<bool> hasInternetAccess() async {
     'example.com',
   ];
 
-  try {
-    // Timeout setelah 3 detik
-    final result = await InternetAddress.lookup(testDomains.first)
-      .timeout(const Duration(seconds: 3));
-
-    return result.isNotEmpty;
-  } on SocketException catch (e) {
-    debugPrint("Internet check failed: $e");
-    return false;
-  } on TimeoutException catch (e) {
-    debugPrint("Internet check timeout: $e");
-    return false;
-  } catch (e) {
-    debugPrint("Unexpected error: $e");
-    return false;
+  for (final domain in testDomains) {
+    try {
+      final result = await InternetAddress.lookup(domain)
+          .timeout(const Duration(seconds: 3));
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        return true;
+      }
+    } on SocketException catch (e) {
+      debugPrint("🔌 SocketException: $e");
+    } on TimeoutException catch (e) {
+      debugPrint("⏳ TimeoutException: $e");
+    } catch (e) {
+      debugPrint("❗ Unexpected: $e");
+    }
   }
+
+  return false;
 }

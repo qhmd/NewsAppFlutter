@@ -14,25 +14,20 @@ class LikeProvider with ChangeNotifier {
   bool isLiked(String url) => _likeStatus[url] ?? false;
   int getLikeCount(String url) => _likeCount[url] ?? 0;
 
-  Future<void> fetchLikeStatus(String url) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
+  void listenToLikeChanges(String url) {
+    final encodedUrl = encodeUrl(url);
 
-    final doc = await _firestore
+    _firestore
         .collection('newsInteractions')
-        .doc(encodeUrl(url))
-        .get();
-
-    if (doc.exists && doc.data()?['likes'] != null) {
-      List likes = doc.data()!['likes'];
-      _likeStatus[url] = likes.contains(uid);
-      _likeCount[url] = likes.length;
-    } else {
-      _likeStatus[url] = false;
-      _likeCount[url] = 0;
-    }
-
-    notifyListeners();
+        .doc(encodedUrl)
+        .snapshots()
+        .listen((doc) {
+          final uid = _auth.currentUser?.uid;
+          final likes = doc.data()?['likes'] as List? ?? [];
+          _likeCount[url] = likes.length;
+          _likeStatus[url] = uid != null && likes.contains(uid);
+          notifyListeners();
+        });
   }
 
   Future<void> toggleLike(String url) async {
@@ -72,10 +67,10 @@ class LikeProvider with ChangeNotifier {
       // ❗ Kalau mau, di sini kamu bisa rollback state
     }
   }
+
   void clear() {
     _likeStatus.clear();
     _likeCount.clear();
     notifyListeners();
   }
-
 }

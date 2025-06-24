@@ -9,7 +9,9 @@ import 'package:newsapp/core/utils/urlConvert.dart';
 import 'package:newsapp/data/models/bookmark.dart';
 import 'package:newsapp/presentation/state/auth_providers.dart';
 import 'package:newsapp/presentation/state/bookmark_providers.dart';
+import 'package:newsapp/presentation/state/comment_providers.dart';
 import 'package:newsapp/presentation/state/connection_providers.dart';
+import 'package:newsapp/presentation/state/like_providers.dart';
 import 'package:newsapp/presentation/state/pageindex_providers.dart';
 import 'package:newsapp/presentation/widget/bookmark_toast.dart';
 import 'package:newsapp/presentation/widget/comment_page.dart';
@@ -47,17 +49,7 @@ class NewsCard extends StatelessWidget {
         : "Tanggal tidak tersedia";
     final isConnected = Provider.of<ConnectionProvider>(context).isConnected;
 
-    Future<int> getCommentCount(String newsUrl) async {
-      final encodedUrl = encodeUrl(newsUrl);
-      final snap = await FirebaseFirestore.instance
-          .collection('newsInteractions')
-          .doc(encodedUrl)
-          .collection('comments')
-          .get();
-
-      return snap.size;
-    }
-
+    final encodeLink = encodeUrl(newsBookmarkList.url);
     return InkWell(
       onTap: onTap,
       child: Card(
@@ -122,29 +114,34 @@ class NewsCard extends StatelessWidget {
                             Row(
                               children: [
                                 GestureDetector(
-                                  child: Icon(
-                                    Icons.comment,
-                                    color: Colors.grey,
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.comment, color: Colors.grey),
+                                      SizedBox(width: 7),
+                                      Consumer<CommentProvider>(
+                                        builder: (context, commentprovider, _) {
+                                          print("tes url ${newsBookmarkList.url}");
+                                          final count = commentprovider
+                                              .getCount(
+                                                newsBookmarkList.url
+                                              );
+                                          return Text(
+                                            "$count",
+                                            style: const TextStyle(
+                                              color: Colors.grey,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
                                   ),
+
                                   onTap: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) =>
                                             CommentPage(news: newsBookmarkList),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                SizedBox(width: 7),
-                                FutureBuilder<int>(
-                                  future: getCommentCount(newsBookmarkList.url),
-                                  builder: (context, snapshot) {
-                                    final count = snapshot.data ?? 0;
-                                    return Text(
-                                      "$count",
-                                      style: const TextStyle(
-                                        color: Colors.grey,
                                       ),
                                     );
                                   },

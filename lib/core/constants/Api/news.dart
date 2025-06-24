@@ -62,7 +62,12 @@ class NewsService {
   }
 
   Future<List<News>> fetchNews(int offset, [int limit = 20]) async {try {
-      final uri = Uri.parse('$baseUrl?limit=$limit&offset=$offset&api-key=$apiKey');
+    final urlReal = '$baseUrl?limit=$limit&offset=$offset&api-key=$apiKey';
+      final uri = Uri.parse(urlReal);
+      if (urlReal == null) {
+        throw ArgumentError("invalid API ${urlReal}");
+      }
+      print("sebelum di eksekusi");
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {

@@ -13,6 +13,7 @@ class AuthProvider with ChangeNotifier {
   bool get isLoggedIn => _user != null;
 
   Future<void> setUser(User? user, BuildContext context) async {
+    if (_user?.uid == user?.uid) return;
     _user = user;
     print("set user ${_user}");
     if (_user != null) {

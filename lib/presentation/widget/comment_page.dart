@@ -122,13 +122,12 @@ class _CommentPageState extends State<CommentPage> {
     final user = _auth.currentUser;
     final uid = user?.uid;
     final userName = user?.displayName ?? 'Anonim';
+    print("isi di widget ${widget.news.url}");
 
     return Scaffold(
       appBar: AppBar(title: const Text("Komentar")),
       body: Column(
         children: [
-          _buildNewsBox(context),
-          const Divider(),
           Expanded(
             child: FutureBuilder(
               future: fetchAllComments(widget.news.url),
@@ -139,114 +138,120 @@ class _CommentPageState extends State<CommentPage> {
 
                 return ListView.builder(
                   padding: const EdgeInsets.all(12),
-                  itemCount: comments.length,
+                  itemCount: comments.length + 2,
                   itemBuilder: (context, index) {
-                    final comment = comments[index];
+                    if (index == 0) {
+                      return _buildNewsBox(context);
+                    } else if (index == 1) {
+                      return const Divider();
+                    } else {
+                      final comment = comments[index -2 ];
 
-                    final parentId = comment['parentId'];
-                    final isReply = parentId != null;
-                    String? photoUrl;
-                    try {
-                      photoUrl = comment['photoUrl'];
-                    } catch (_) {
-                      photoUrl = null;
-                    }
+                      final parentId = comment['parentId'];
+                      final isReply = parentId != null;
+                      String? photoUrl;
+                      try {
+                        photoUrl = comment['photoUrl'];
+                      } catch (_) {
+                        photoUrl = null;
+                      }
 
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        left: isReply ? 16.0 : 0.0,
-                        bottom: 8,
-                      ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage:
-                              comment['photoUrl'] != null &&
-                                  comment['photoUrl'] != ''
-                              ? NetworkImage(comment['photoUrl'])
-                              : null,
-                          child:
-                              comment['photoUrl'] == null ||
-                                  comment['photoUrl'] == ''
-                              ? const Icon(Icons.person)
-                              : null,
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          left: isReply ? 16.0 : 0.0,
+                          bottom: 8,
                         ),
-                        title: Text(comment['name'] ?? 'No Name'),
-                        subtitle: Column(
-                          // Use a Column to stack the message and timestamp
-                          crossAxisAlignment: CrossAxisAlignment
-                              .start, // Align text to the start
-                          children: [
-                            Text(
-                              comment['message'] ?? '',
-                            ), // The original message
-                            Text(
-                              formatTimestamp(
-                                context,
-                                (comment.data() as Map)['editedAt'] ??
-                                    comment['createdAt'],
-                                isEdited: (comment.data() as Map).containsKey(
-                                  'editedAt',
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage:
+                                comment['photoUrl'] != null &&
+                                    comment['photoUrl'] != ''
+                                ? NetworkImage(comment['photoUrl'])
+                                : null,
+                            child:
+                                comment['photoUrl'] == null ||
+                                    comment['photoUrl'] == ''
+                                ? const Icon(Icons.person)
+                                : null,
+                          ),
+                          title: Text(comment['name'] ?? 'No Name'),
+                          subtitle: Column(
+                            // Use a Column to stack the message and timestamp
+                            crossAxisAlignment: CrossAxisAlignment
+                                .start, // Align text to the start
+                            children: [
+                              Text(
+                                comment['message'] ?? '',
+                              ), // The original message
+                              Text(
+                                formatTimestamp(
+                                  context,
+                                  (comment.data() as Map)['editedAt'] ??
+                                      comment['createdAt'],
+                                  isEdited: (comment.data() as Map).containsKey(
+                                    'editedAt',
+                                  ),
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey,
                                 ),
                               ),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                        dense: true,
-                        trailing: _auth.currentUser?.uid == comment['uid']
-                            ? PopupMenuButton<String>(
-                                offset: const Offset(0, 50),
-                                onSelected: (value) async {
-                                  if (value == 'edit') {
-                                    _controller.text = comment['message'];
+                            ],
+                          ),
+                          dense: true,
+                          trailing: _auth.currentUser?.uid == comment['uid']
+                              ? PopupMenuButton<String>(
+                                  offset: const Offset(0, 50),
+                                  onSelected: (value) async {
+                                    if (value == 'edit') {
+                                      _controller.text = comment['message'];
+                                      setState(() {
+                                        replyingToCommentId = comment.id;
+                                        replyingToUserId = comment['uid'];
+                                        replyingToUserName =
+                                            null; // kita edit bukan membalas
+                                      });
+                                    } else if (value == 'delete') {
+                                      final encodedUrl = base64Url.encode(
+                                        utf8.encode(widget.news.url),
+                                      );
+                                      await _firestore
+                                          .collection('newsInteractions')
+                                          .doc(encodedUrl)
+                                          .collection('comments')
+                                          .doc(comment.id)
+                                          .delete();
+                                      setState(() {}); // refresh komentar
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(
+                                      value: 'edit',
+                                      child: Text('Edit'),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('Hapus'),
+                                    ),
+                                  ],
+                                )
+                              : TextButton(
+                                  child: const Text(
+                                    "Balas",
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  onPressed: () {
                                     setState(() {
                                       replyingToCommentId = comment.id;
                                       replyingToUserId = comment['uid'];
-                                      replyingToUserName =
-                                          null; // kita edit bukan membalas
+                                      replyingToUserName = comment['name'];
                                     });
-                                  } else if (value == 'delete') {
-                                    final encodedUrl = base64Url.encode(
-                                      utf8.encode(widget.news.url),
-                                    );
-                                    await _firestore
-                                        .collection('newsInteractions')
-                                        .doc(encodedUrl)
-                                        .collection('comments')
-                                        .doc(comment.id)
-                                        .delete();
-                                    setState(() {}); // refresh komentar
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(
-                                    value: 'edit',
-                                    child: Text('Edit'),
-                                  ),
-                                  const PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text('Hapus'),
-                                  ),
-                                ],
-                              )
-                            : TextButton(
-                                child: const Text(
-                                  "Balas",
-                                  style: TextStyle(fontSize: 12),
+                                  },
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    replyingToCommentId = comment.id;
-                                    replyingToUserId = comment['uid'];
-                                    replyingToUserName = comment['name'];
-                                  });
-                                },
-                              ),
-                      ),
-                    );
+                        ),
+                      );
+                    }
                   },
                 );
               },
@@ -321,7 +326,6 @@ class _CommentPageState extends State<CommentPage> {
                           .collection('users')
                           .doc(replyingToUserId)
                           .get();
-                      
 
                       final targetToken = userDoc['fcmToken'];
                       if (targetToken != null) {

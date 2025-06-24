@@ -29,7 +29,7 @@ class ConnectionProvider with ChangeNotifier {
         if (!_isConnected) {
           showCustomToast(isDeviceConnected ? "No internet access" : "You're offline");
         } else {
-          showCustomToast("Back online!");
+          showCustomToast("online!");
         }
       }
     } catch (e) {
