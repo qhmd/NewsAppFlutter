@@ -1,15 +1,18 @@
 import 'dart:ffi';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:newsapp/core/constants/Api/news.dart';
 import 'package:newsapp/core/constants/formatted_date.dart';
+import 'package:newsapp/core/utils/urlConvert.dart';
 import 'package:newsapp/data/models/bookmark.dart';
 import 'package:newsapp/presentation/state/auth_providers.dart';
 import 'package:newsapp/presentation/state/bookmark_providers.dart';
 import 'package:newsapp/presentation/state/connection_providers.dart';
 import 'package:newsapp/presentation/state/pageindex_providers.dart';
 import 'package:newsapp/presentation/widget/bookmark_toast.dart';
+import 'package:newsapp/presentation/widget/comment_page.dart';
 import 'package:newsapp/presentation/widget/like.dart';
 import 'package:newsapp/presentation/widget/share_buttom_sheet.dart'
     hide SizedBox, Text;
@@ -19,10 +22,11 @@ import 'package:share_plus/share_plus.dart';
 class NewsCard extends StatelessWidget {
   final Bookmark newsBookmarkList;
   final VoidCallback onTap;
-
+  final bool showActions;
   const NewsCard({
     required this.newsBookmarkList,
     required this.onTap,
+    this.showActions = true, // default true
     super.key,
   });
 
@@ -42,6 +46,18 @@ class NewsCard extends StatelessWidget {
         ? newsBookmarkList.multimedia
         : "Tanggal tidak tersedia";
     final isConnected = Provider.of<ConnectionProvider>(context).isConnected;
+
+    Future<int> getCommentCount(String newsUrl) async {
+      final encodedUrl = encodeUrl(newsUrl);
+      final snap = await FirebaseFirestore.instance
+          .collection('newsInteractions')
+          .doc(encodedUrl)
+          .collection('comments')
+          .get();
+
+      return snap.size;
+    }
+
     return InkWell(
       onTap: onTap,
       child: Card(
@@ -101,17 +117,40 @@ class NewsCard extends StatelessWidget {
                         children: [
                           SizedBox(width: 20),
                           Like(newsUrl: newsBookmarkList.url),
-                          SizedBox(width: 35),
-                          GestureDetector(
-                            child: Icon(
-                              Icons.share_outlined,
-                              color: Colors.grey,
+                          SizedBox(width: 15),
+                          if (showActions)
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  child: Icon(
+                                    Icons.comment,
+                                    color: Colors.grey,
+                                  ),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            CommentPage(news: newsBookmarkList),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                SizedBox(width: 7),
+                                FutureBuilder<int>(
+                                  future: getCommentCount(newsBookmarkList.url),
+                                  builder: (context, snapshot) {
+                                    final count = snapshot.data ?? 0;
+                                    return Text(
+                                      "$count",
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
-                            onTap: () {
-                              print("di news card ${newsBookmarkList.id}");
-                              shareButtomSheet(context, newsBookmarkList);
-                            },
-                          ),
                         ],
                       ),
                       Row(
@@ -136,12 +175,13 @@ class NewsCard extends StatelessWidget {
                                 ),
                                 onTap: () {
                                   if (uid == null) {
-                                    final toProfile = context.read<PageIndexProvider>();
+                                    final toProfile = context
+                                        .read<PageIndexProvider>();
                                     showCustomToast("You have to login first");
                                     toProfile.changePage(2);
                                     return;
                                   }
-                                  
+
                                   bookmarkProvider.toggleBookmark(
                                     newsBookmarkList,
                                     uid,

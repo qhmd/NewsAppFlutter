@@ -59,6 +59,9 @@ dependencies:
   url_launcher: ^6.2.5
   like_button: ^2.1.0
   tuple: ^2.0.1
+  firebase_messaging: ^15.2.7
+  flutter_local_notifications: ^19.3.0
+  
   
 dev_dependencies:
   flutter_test:

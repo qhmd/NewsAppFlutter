@@ -40,7 +40,10 @@ class NewsListSeparated extends StatelessWidget {
       id: item.url,
       title: item.title,
       source: item.byline ?? '',
-      multimedia: item.multimedia?[2]?['url'] ?? '',
+      multimedia: (item.multimedia != null && item.multimedia!.length > 2)
+          ? item.multimedia![2]['url'] ?? ''
+          : '',
+
       date: item.published_date,
       url: item.url,
     );
@@ -58,7 +61,6 @@ class NewsListSeparated extends StatelessWidget {
         itemCount: newsList.length + 1,
         itemBuilder: (context, index) {
           if (index == newsList.length) {
-
             // Loading saat load more
             if (hasMore && loading) {
               return const Padding(
@@ -66,7 +68,6 @@ class NewsListSeparated extends StatelessWidget {
                 child: Center(child: CircularProgressIndicator()),
               );
             }
-
             // Loading saat awal masuk tanpa data dan sedang loading
             else if (newsList.isEmpty && loading) {
               return const Padding(
@@ -74,7 +75,6 @@ class NewsListSeparated extends StatelessWidget {
                 child: Center(child: CircularProgressIndicator()),
               );
             }
-
             // Pesan saat tidak ada koneksi dan tidak ada data
             else if (newsList.isEmpty && !isConnected && !loading) {
               return const Padding(
@@ -82,11 +82,7 @@ class NewsListSeparated extends StatelessWidget {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(
-                        Icons.wifi_off,
-                        size: 48,
-                        color: Colors.grey,
-                      ),
+                      Icon(Icons.wifi_off, size: 48, color: Colors.grey),
                       SizedBox(height: 16),
                       Text(
                         'Tidak ada koneksi internet',
@@ -99,10 +95,7 @@ class NewsListSeparated extends StatelessWidget {
                       SizedBox(height: 8),
                       Text(
                         'Periksa koneksi internet Anda',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
                     ],
                   ),

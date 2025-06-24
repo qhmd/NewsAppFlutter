@@ -1,5 +1,6 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:newsapp/presentation/screens/profile/profile.dart';
 
 import 'package:newsapp/presentation/state/auth_providers.dart';
@@ -8,10 +9,12 @@ import 'package:newsapp/presentation/state/connection_providers.dart';
 import 'package:newsapp/presentation/state/like_providers.dart';
 import 'package:newsapp/presentation/state/news_providers.dart';
 import 'package:newsapp/presentation/state/pageindex_providers.dart';
-
+import 'package:newsapp/presentation/state/comment_providers.dart';
 
 import 'package:newsapp/core/theme/colors.dart';
 import 'package:newsapp/presentation/screens/inbox.dart';
+import 'package:newsapp/services/local_notif.dart';
+import 'package:newsapp/services/setupfcm.dart';
 import 'package:provider/provider.dart';
 import 'package:newsapp/presentation/screens/home_screen.dart'; // <- ini import biasa
 import 'package:firebase_core/firebase_core.dart';
@@ -20,6 +23,7 @@ import './data/models/bookmark.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:overlay_support/overlay_support.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Wajib untuk async main
@@ -28,6 +32,15 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(BookmarkAdapter());
   await Hive.openBox('bookmarkBox');
+
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+  // Minta izin (khusus iOS)
+  NotificationSettings settings = await messaging.requestPermission();
+
+  // Ambil token
+  String? token = await messaging.getToken();
+  print("🔑 Token FCM: $token");
 
   runApp(
     MultiProvider(
@@ -38,6 +51,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => BookmarkProvider()),
         ChangeNotifierProvider(create: (_) => PageIndexProvider()),
         ChangeNotifierProvider(create: (_) => LikeProvider()),
+        ChangeNotifierProvider(create: (_) => CommentProvider()),
       ],
       child: OverlaySupport(child: const MyApp()),
     ),
@@ -55,30 +69,43 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    final ConnectProv = context.read<ConnectionProvider>();
-    if (!ConnectProv.isConnected) {
-        context.read<BookmarkProvider>().loadFromLocal();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _handleStartup();
+    });
+    setupFCM();
+  }
+
+  Future<void> _handleStartup() async {
+    final connectProv = context.read<ConnectionProvider>();
+    final bookmarkProvider = context.read<BookmarkProvider>();
+    final authProvider = context.read<AuthProvider>();
+
+    if (!connectProv.isConnected) {
+      bookmarkProvider.loadFromLocal();
     } else {
-      final AuthInfo = context.read<AuthProvider>();
-      if (AuthInfo.isLoggedIn) {
-        context.read<BookmarkProvider>().syncFromCloud(AuthInfo.user!.uid);
+      if (authProvider.isLoggedIn) {
+        bookmarkProvider.syncFromCloud(authProvider.user!.uid);
       }
     }
-    // Pindahkan listener ke sini
+
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (user != null) {
         try {
-          context.read<AuthProvider>().setUser(user, context);
+          authProvider.setUser(user, context);
         } catch (e) {
-          debugPrint("errormain");
+          debugPrint("❌ Error saat setUser: $e");
         }
       } else {
-        try {} catch (e) {
-          context.read<AuthProvider>().clearUser();
+        try {
+          authProvider.clearUser();
+        } catch (e) {
+          debugPrint("❌ Error saat clearUser: $e");
         }
       }
     });
-    
+
+    await LocalNotificationService().init(); // <- pastikan ada init()
+    await setupFCM(); // jika ini juga async
   }
 
   Widget build(BuildContext context) {
