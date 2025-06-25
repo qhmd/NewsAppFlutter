@@ -35,13 +35,22 @@ import 'package:newsapp/services/setupfcm.dart';
 // Firebase options
 import 'firebase_options.dart';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+@pragma('vm:entry-point') // WAJIB agar tidak dihapus saat optimisasi
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Inisialisasi Firebase jika diperlukan (saat app terminated)
+  await Firebase.initializeApp();
+  print('Handling a background message: ${message.messageId}');
+  // Bisa tambahkan logika lain di sini (seperti menyimpan lokal, dll)
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Initialize Hive
   await Hive.initFlutter();
@@ -67,9 +76,7 @@ class NewsApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CommentProvider()),
         ChangeNotifierProvider(create: (_) => MyAppState()),
       ],
-      child: OverlaySupport(
-        child: const MyApp(),
-      ),
+      child: OverlaySupport(child: const MyApp()),
     );
   }
 }
@@ -158,9 +165,9 @@ class _MyAppState extends State<MyApp> {
 
 class MyAppState extends ChangeNotifier {
   WordPair _current = WordPair.random();
-  
+
   WordPair get current => _current;
-  
+
   void getNext() {
     _current = WordPair.random();
     notifyListeners();
@@ -169,7 +176,7 @@ class MyAppState extends ChangeNotifier {
 
 class BottomNavigation extends StatefulWidget {
   const BottomNavigation({super.key});
-  
+
   @override
   State<BottomNavigation> createState() => _BottomNavigationState();
 }
@@ -180,11 +187,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
   @override
   void initState() {
     super.initState();
-    _pages = [
-      const HomeScreen(),
-      const Inbox(),
-      const Profile(),
-    ];
+    _pages = [const HomeScreen(), const Inbox(), const Profile()];
   }
 
   void _onItemTapped(int index) {
@@ -197,10 +200,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
     final currentIndex = context.watch<PageIndexProvider>().currentIndex;
 
     return Scaffold(
-      body: IndexedStack(
-        index: currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: currentIndex, children: _pages),
       backgroundColor: theme.colorScheme.primaryContainer,
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -210,18 +210,9 @@ class _BottomNavigationState extends State<BottomNavigation> {
         unselectedItemColor: Colors.grey,
         backgroundColor: theme.colorScheme.primaryContainer,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inbox),
-            label: 'Inbox',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.inbox), label: 'Inbox'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

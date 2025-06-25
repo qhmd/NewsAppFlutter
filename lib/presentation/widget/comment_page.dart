@@ -1,6 +1,4 @@
 import 'dart:convert';
-
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,36 +18,53 @@ class CommentPage extends StatefulWidget {
 
 class _CommentPageState extends State<CommentPage> {
   final TextEditingController _controller = TextEditingController();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   String? replyingToCommentId;
   String? replyingToUserId;
   String? replyingToUserName;
+  String? editingCommentId;
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  List<Map<String, dynamic>> localPendingComments = [];
 
-  Future<List<QueryDocumentSnapshot>> fetchAllComments(String newsUrl) async {
+  bool get isEditing => editingCommentId != null;
+
+  Stream<Map<String?, List>> getGroupedCommentStream(String newsUrl) {
     final encodedUrl = base64Url.encode(utf8.encode(newsUrl));
-    final snap = await _firestore
+    final firestoreStream = _firestore
         .collection('newsInteractions')
         .doc(encodedUrl)
         .collection('comments')
         .orderBy('createdAt')
-        .get();
+        .snapshots();
 
-    return snap.docs;
+    return firestoreStream.map((snap) {
+      final grouped = <String?, List>{};
+
+      for (var doc in snap.docs) {
+        final parentId = doc['parentId'];
+        grouped.putIfAbsent(parentId, () => []).add(doc);
+      }
+
+      for (var local in localPendingComments) {
+        final parentId = local['parentId'];
+        grouped.putIfAbsent(parentId, () => []).add(local);
+      }
+
+      return grouped;
+    });
   }
 
   String formatTimestamp(
-    context,
+    BuildContext context,
     Timestamp? timestamp, {
     bool isEdited = false,
   }) {
     if (timestamp == null) return '';
     final dt = timestamp.toDate();
     final formatted =
-        "${TimeOfDay.fromDateTime(dt).format(context)} - "
-        "${dt.day} ${_monthName(dt.month)} ${dt.year % 100}";
+        "${TimeOfDay.fromDateTime(dt).format(context)} - ${dt.day} ${_monthName(dt.month)} ${dt.year % 100}";
     return isEdited ? "Edited: $formatted" : formatted;
   }
 
@@ -71,204 +86,75 @@ class _CommentPageState extends State<CommentPage> {
     return months[month - 1];
   }
 
-  Future<void> sendComment({
-    required String message,
-    required String newsUrl,
-    required String userName,
-    required String uid,
-    String? parentId,
-    String? replyToUid,
-  }) async {
-    final encodedUrl = base64Url.encode(utf8.encode(newsUrl));
-    final photoUrl = FirebaseAuth.instance.currentUser?.photoURL ?? '';
-
-    final collection = _firestore
-        .collection('newsInteractions')
-        .doc(encodedUrl)
-        .collection('comments');
-
-    if (replyingToCommentId != null && replyingToUserName == null) {
-      // Ini edit
-      final docRef = collection.doc(replyingToCommentId);
-      final docSnapshot = await docRef.get();
-
-      if (docSnapshot.exists) {
-        await docRef.update({
-          'message': message,
-          'editedAt': FieldValue.serverTimestamp(),
-        });
-      } else {
-        // ❌ Dokumen sudah dihapus → reset state
-        replyingToCommentId = null;
-        replyingToUserId = null;
-        replyingToUserName = null;
-      }
-    } else {
-      // Ini komentar baru
-      await collection.add({
-        'message': message,
-        'name': userName,
-        'uid': uid,
-        'photoUrl': photoUrl,
-        'parentId': parentId,
-        'replyToUid': replyToUid,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final user = _auth.currentUser;
-    final uid = user?.uid;
-    final userName = user?.displayName ?? 'Anonim';
-    print("isi di widget ${widget.news.url}");
+    final uid = _auth.currentUser?.uid;
+    final userName = _auth.currentUser?.displayName ?? 'Anonim';
 
     return Scaffold(
       appBar: AppBar(title: const Text("Komentar")),
       body: Column(
         children: [
           Expanded(
-            child: FutureBuilder(
-              future: fetchAllComments(widget.news.url),
+            child: StreamBuilder(
+              stream: getGroupedCommentStream(widget.news.url),
               builder: (context, snapshot) {
                 if (!snapshot.hasData)
                   return const Center(child: CircularProgressIndicator());
-                final comments = snapshot.data as List<QueryDocumentSnapshot>;
+                final grouped = snapshot.data!;
+                final parents = grouped[null] ?? [];
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: comments.length + 2,
+                  itemCount: parents.length + 2,
                   itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return _buildNewsBox(context);
-                    } else if (index == 1) {
-                      return const Divider();
-                    } else {
-                      final comment = comments[index - 2];
+                    if (index == 0) return _buildNewsBox(context);
+                    if (index == 1) return const Divider();
 
-                      final parentId = comment['parentId'];
-                      final isReply = parentId != null;
-                      String? photoUrl;
-                      try {
-                        photoUrl = comment['photoUrl'];
-                      } catch (_) {
-                        photoUrl = null;
-                      }
+                    final parent = parents[index - 2];
+                    final parentId = parent is QueryDocumentSnapshot
+                        ? parent.id
+                        : parent['id'];
+                    final replies = grouped[parentId] ?? [];
 
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          left: isReply ? 16.0 : 0.0,
-                          bottom: 8,
-                        ),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage:
-                                comment['photoUrl'] != null &&
-                                    comment['photoUrl'] != ''
-                                ? NetworkImage(comment['photoUrl'])
-                                : null,
-                            child:
-                                comment['photoUrl'] == null ||
-                                    comment['photoUrl'] == ''
-                                ? const Icon(Icons.person)
-                                : null,
-                          ),
-                          title: Text(comment['name'] ?? 'No Name'),
-                          subtitle: Column(
-                            // Use a Column to stack the message and timestamp
-                            crossAxisAlignment: CrossAxisAlignment
-                                .start, // Align text to the start
-                            children: [
-                              Text(
-                                comment['message'] ?? '',
-                              ), // The original message
-                              Text(
-                                formatTimestamp(
-                                  context,
-                                  (comment.data() as Map)['editedAt'] ??
-                                      comment['createdAt'],
-                                  isEdited: (comment.data() as Map).containsKey(
-                                    'editedAt',
-                                  ),
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                          dense: true,
-                          trailing: _auth.currentUser?.uid == comment['uid']
-                              ? PopupMenuButton<String>(
-                                  offset: const Offset(0, 50),
-                                  onSelected: (value) async {
-                                    if (value == 'edit') {
-                                      _controller.text = comment['message'];
-                                      setState(() {
-                                        replyingToCommentId = comment.id;
-                                        replyingToUserId = comment['uid'];
-                                        replyingToUserName =
-                                            null; // kita edit bukan membalas
-                                      });
-                                    } else if (value == 'delete') {
-                                      final encodedUrl = base64Url.encode(
-                                        utf8.encode(widget.news.url),
-                                      );
-                                      await _firestore
-                                          .collection('newsInteractions')
-                                          .doc(encodedUrl)
-                                          .collection('comments')
-                                          .doc(comment.id)
-                                          .delete();
-                                      setState(() {}); // refresh komentar
-                                    }
-                                  },
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(
-                                      value: 'edit',
-                                      child: Text('Edit'),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'delete',
-                                      child: Text('Hapus'),
-                                    ),
-                                  ],
-                                )
-                              : TextButton(
-                                  child: const Text(
-                                    "Balas",
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      replyingToCommentId = comment.id;
-                                      replyingToUserId = comment['uid'];
-                                      replyingToUserName = comment['name'];
-                                    });
-                                  },
-                                ),
-                        ),
-                      );
-                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildCommentTile(parent, isReply: false),
+                        ...replies
+                            .map(
+                              (reply) =>
+                                  _buildCommentTile(reply, isReply: true),
+                            )
+                            .toList(),
+                      ],
+                    );
                   },
                 );
               },
             ),
           ),
-          // Border Untuk Balas Ke Username
+          if (isEditing)
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  const Text("Mengedit komentar"),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        editingCommentId = null;
+                        _controller.clear();
+                      });
+                    },
+                    child: const Text("Batal"),
+                  ),
+                ],
+              ),
+            ),
           if (replyingToUserName != null)
             Container(
               decoration: const BoxDecoration(
-                border: Border(
-                  // Use Border for specific sides
-                  top: BorderSide(
-                    color: Colors.grey, // Color of the top border
-                    width: 1,
-                    // Thickness of the top border
-                  ),
-                ),
+                border: Border(top: BorderSide(color: Colors.grey, width: 1)),
               ),
               child: Padding(
                 padding: const EdgeInsets.only(left: 12, top: 8),
@@ -295,71 +181,111 @@ class _CommentPageState extends State<CommentPage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: Container(
-                    constraints: BoxConstraints(maxHeight: 200),
-                    child: Scrollbar(
-                      child: TextField(
-                        maxLines: null,
-                        keyboardType: TextInputType.multiline,
-                        controller: _controller,
-                        decoration: const InputDecoration(
-                          hintText: "Tulis komentar...",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
+                  child: TextField(
+                    controller: _controller,
+                    maxLines: null,
+                    keyboardType: TextInputType.multiline,
+                    decoration: const InputDecoration(
+                      hintText: "Tulis komentar...",
+                      border: OutlineInputBorder(),
                     ),
                   ),
                 ),
-                Align(
-                  alignment: Alignment.bottomCenter,
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: () async {
+                    if (_controller.text.trim().isEmpty || uid == null) return;
 
-                  child: IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: () async {
-                      print('replyingToUserId: $replyingToUserId');
-                      print('replyingToCommentId: $replyingToCommentId');
-                      print('userName: $userName');
-                      print('uid: $uid');
-                      if (_controller.text.trim().isEmpty || uid == null)
-                        return;
-                      final mention = replyingToUserName != null
-                          ? "@$replyingToUserName "
-                          : "";
+                    final message = _controller.text.trim();
+                    final encodedUrl = base64Url.encode(
+                      utf8.encode(widget.news.url),
+                    );
 
-                      await sendComment(
-                        newsUrl: widget.news.url,
-                        message: mention + _controller.text.trim(),
-                        userName: userName,
-                        uid: uid,
-                        parentId: replyingToCommentId,
-                        replyToUid: replyingToUserId,
-                      );
-                      // Setelah komentar dikirim:
-                      if (replyingToUserId != null && replyingToUserId != uid) {
-                        // Hindari kirim notif ke diri sendiri
-                        final userDoc = await FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(replyingToUserId)
-                            .get();
+                    if (isEditing) {
+                      final commentRef = _firestore
+                          .collection('newsInteractions')
+                          .doc(encodedUrl)
+                          .collection('comments')
+                          .doc(editingCommentId);
 
-                        final targetToken = userDoc['fcmToken'];
-                        if (targetToken != null) {
-                          await sendPushNotification(
-                            token: targetToken,
-                            title: "$userName membalas komentarmu",
-                            body: _controller.text.trim(),
-                          );
-                        }
-                      }
-
-                      _controller.clear();
-                      setState(() {
-                        replyingToCommentId = null;
-                        replyingToUserId = null;
-                        replyingToUserName = null;
+                      await commentRef.update({
+                        'message': message,
+                        'editedAt': FieldValue.serverTimestamp(),
                       });
-                    },
-                  ),
+
+                      setState(() {
+                        editingCommentId = null;
+                        _controller.clear();
+                      });
+                      return;
+                    }
+
+                    final mention = replyingToUserName != null
+                        ? "@$replyingToUserName "
+                        : "";
+                    final fullMessage = mention + message;
+                    final tempId =
+                        'temp-${DateTime.now().millisecondsSinceEpoch}';
+
+                    final newComment = {
+                      'id': tempId,
+                      'message': fullMessage,
+                      'name': userName,
+                      'uid': uid,
+                      'photoUrl': _auth.currentUser?.photoURL ?? '',
+                      'parentId': replyingToCommentId,
+                      'replyToUid': replyingToUserId,
+                      'createdAt': Timestamp.now(),
+                      'sending': true,
+                    };
+
+                    setState(() {
+                      localPendingComments.add(newComment);
+                      replyingToCommentId = null;
+                      replyingToUserId = null;
+                      replyingToUserName = null;
+                      _controller.clear();
+                    });
+
+                    final docRef = await _firestore
+                        .collection('newsInteractions')
+                        .doc(encodedUrl)
+                        .collection('comments')
+                        .add({
+                          'message': fullMessage,
+                          'name': userName,
+                          'uid': uid,
+                          'photoUrl': _auth.currentUser?.photoURL ?? '',
+                          'parentId': newComment['parentId'],
+                          'replyToUid': newComment['replyToUid'],
+                          'createdAt': FieldValue.serverTimestamp(),
+                        });
+
+                    setState(() {
+                      localPendingComments.removeWhere(
+                        (c) => c['id'] == tempId,
+                      );
+                    });
+                    print("ini di jlanankan");
+                    if (newComment['replyToUid'] != null &&
+                        newComment['replyToUid'] != uid) {
+                      final userDoc = await _firestore
+                          .collection('users')
+                          .doc(newComment['replyToUid'] as String)
+                          .get();
+                      final token = userDoc['fcmToken'];
+                      print("isi fcm skrn ${token}");
+                      if (token != null) {
+                        await sendPushNotification(
+                          token: token,
+                          title: "$userName membalas komentarmu",
+                          body: message,
+                          newsUrl: widget.news.url,
+                          commendUid: docRef.id,
+                        );
+                      }
+                    }
+                  },
                 ),
               ],
             ),
@@ -369,11 +295,107 @@ class _CommentPageState extends State<CommentPage> {
     );
   }
 
-  Widget _buildNewsBox(context) {
+  Widget _buildNewsBox(BuildContext context) {
     return NewsCard(
       newsBookmarkList: widget.news,
       onTap: () => openWebViewModal(context, widget.news.url),
       showActions: false,
     );
+  }
+
+  Widget _buildCommentTile(dynamic comment, {required bool isReply}) {
+    final data = comment is QueryDocumentSnapshot
+        ? comment.data() as Map
+        : comment;
+    final photoUrl = data['photoUrl'] ?? '';
+    final name = data['name'] ?? 'No Name';
+    final message = data['message'] ?? '';
+    final uid = _auth.currentUser?.uid;
+    final isSending = data['sending'] == true;
+
+    return Padding(
+      padding: EdgeInsets.only(left: isReply ? 16.0 : 0.0, bottom: 8),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundImage: (photoUrl != '') ? NetworkImage(photoUrl) : null,
+          child: (photoUrl == '') ? const Icon(Icons.person) : null,
+        ),
+        title: Text(name),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(message),
+            Text(
+              isSending
+                  ? "Sending..."
+                  : formatTimestamp(
+                      context,
+                      data['editedAt'] ?? data['createdAt'],
+                      isEdited: data.containsKey('editedAt'),
+                    ),
+              style: const TextStyle(fontSize: 10, color: Colors.grey),
+            ),
+          ],
+        ),
+        dense: true,
+        trailing: (() {
+          final data = comment is QueryDocumentSnapshot
+              ? comment.data() as Map
+              : comment as Map;
+
+          final isOwner = data['uid'] == uid;
+          final isPending = data['sending'] == true;
+
+          if (isOwner && !isPending) {
+            // Pemilik komentar yang bukan pending → bisa edit / hapus
+            return PopupMenuButton<String>(
+              onSelected: (value) => _handleEditDelete(value, comment),
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'edit', child: Text('Edit')),
+                PopupMenuItem(value: 'delete', child: Text('Hapus')),
+              ],
+            );
+          } else {
+            // Selain itu → hanya bisa balas
+            return TextButton(
+              onPressed: () {
+                final originalParentId = data['parentId'];
+                setState(() {
+                  replyingToCommentId =
+                      originalParentId ??
+                      (comment is QueryDocumentSnapshot
+                          ? comment.id
+                          : data['id']);
+                  replyingToUserId = data['uid'];
+                  replyingToUserName = data['name'];
+                });
+              },
+              child: const Text("Balas", style: TextStyle(fontSize: 12)),
+            );
+          }
+        })(),
+      ),
+    );
+  }
+
+  void _handleEditDelete(String action, QueryDocumentSnapshot comment) async {
+    if (action == 'edit') {
+      _controller.text = comment['message'];
+      setState(() {
+        editingCommentId = comment.id;
+        replyingToCommentId = null;
+        replyingToUserId = null;
+        replyingToUserName = null;
+      });
+    } else if (action == 'delete') {
+      final encodedUrl = base64Url.encode(utf8.encode(widget.news.url));
+      await _firestore
+          .collection('newsInteractions')
+          .doc(encodedUrl)
+          .collection('comments')
+          .doc(comment.id)
+          .delete();
+      setState(() {});
+    }
   }
 }
