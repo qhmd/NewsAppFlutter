@@ -145,7 +145,7 @@ class _CommentPageState extends State<CommentPage> {
                     } else if (index == 1) {
                       return const Divider();
                     } else {
-                      final comment = comments[index -2 ];
+                      final comment = comments[index - 2];
 
                       final parentId = comment['parentId'];
                       final isReply = parentId != null;
@@ -292,58 +292,74 @@ class _CommentPageState extends State<CommentPage> {
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: "Tulis komentar...",
-                      border: OutlineInputBorder(),
+                  child: Container(
+                    constraints: BoxConstraints(maxHeight: 200),
+                    child: Scrollbar(
+                      child: TextField(
+                        maxLines: null,
+                        keyboardType: TextInputType.multiline,
+                        controller: _controller,
+                        decoration: const InputDecoration(
+                          hintText: "Tulis komentar...",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
                     ),
                   ),
                 ),
+                Align(
+                  alignment: Alignment.bottomCenter,
 
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: () async {
-                    if (_controller.text.trim().isEmpty || uid == null) return;
-                    final mention = replyingToUserName != null
-                        ? "@$replyingToUserName "
-                        : "";
+                  child: IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: () async {
+                      print('replyingToUserId: $replyingToUserId');
+                      print('replyingToCommentId: $replyingToCommentId');
+                      print('userName: $userName');
+                      print('uid: $uid');
+                      if (_controller.text.trim().isEmpty || uid == null)
+                        return;
+                      final mention = replyingToUserName != null
+                          ? "@$replyingToUserName "
+                          : "";
 
-                    await sendComment(
-                      newsUrl: widget.news.url,
-                      message: mention + _controller.text.trim(),
-                      userName: userName,
-                      uid: uid,
-                      parentId: replyingToCommentId,
-                      replyToUid: replyingToUserId,
-                    );
-                    // Setelah komentar dikirim:
-                    if (replyingToUserId != null && replyingToUserId != uid) {
-                      // Hindari kirim notif ke diri sendiri
-                      final userDoc = await FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(replyingToUserId)
-                          .get();
+                      await sendComment(
+                        newsUrl: widget.news.url,
+                        message: mention + _controller.text.trim(),
+                        userName: userName,
+                        uid: uid,
+                        parentId: replyingToCommentId,
+                        replyToUid: replyingToUserId,
+                      );
+                      // Setelah komentar dikirim:
+                      if (replyingToUserId != null && replyingToUserId != uid) {
+                        // Hindari kirim notif ke diri sendiri
+                        final userDoc = await FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(replyingToUserId)
+                            .get();
 
-                      final targetToken = userDoc['fcmToken'];
-                      if (targetToken != null) {
-                        await sendPushNotification(
-                          token: targetToken,
-                          title: "$userName membalas komentarmu",
-                          body: _controller.text.trim(),
-                        );
+                        final targetToken = userDoc['fcmToken'];
+                        if (targetToken != null) {
+                          await sendPushNotification(
+                            token: targetToken,
+                            title: "$userName membalas komentarmu",
+                            body: _controller.text.trim(),
+                          );
+                        }
                       }
-                    }
 
-                    _controller.clear();
-                    setState(() {
-                      replyingToCommentId = null;
-                      replyingToUserId = null;
-                      replyingToUserName = null;
-                    });
-                  },
+                      _controller.clear();
+                      setState(() {
+                        replyingToCommentId = null;
+                        replyingToUserId = null;
+                        replyingToUserName = null;
+                      });
+                    },
+                  ),
                 ),
               ],
             ),
