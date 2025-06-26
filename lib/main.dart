@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:overlay_support/overlay_support.dart';
 import 'package:provider/provider.dart';
@@ -29,21 +28,32 @@ import 'package:newsapp/presentation/state/news_providers.dart';
 import 'package:newsapp/presentation/state/pageindex_providers.dart';
 
 // Services
-import 'package:newsapp/services/local_notif.dart';
 import 'package:newsapp/services/setupfcm.dart';
+import 'package:newsapp/services/local_notif.dart';
 
 // Firebase options
 import 'firebase_options.dart';
 
-import 'package:firebase_messaging/firebase_messaging.dart';
-
 @pragma('vm:entry-point') // WAJIB agar tidak dihapus saat optimisasi
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Inisialisasi Firebase jika diperlukan (saat app terminated)
-  await Firebase.initializeApp();
-  print('Handling a background message: ${message.messageId}');
-  // Bisa tambahkan logika lain di sini (seperti menyimpan lokal, dll)
+  // Jangan tampilkan notif lokal kalau sudah ada message.notification
+  if (message.notification == null) {
+    final newsUrl = message.data['newsUrl'] ?? '';
+    final commentId = message.data['commentUid'] ?? '';
+
+    await LocalNotificationService().init();
+    await LocalNotificationService().showNotificationWithPayload(
+      id: message.hashCode,
+      title: message.data['title'] ?? 'Komentar Baru',
+      body: message.data['body'] ?? '',
+      newsUrl: newsUrl,
+      commentId: commentId,
+    );
+  }
 }
+
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -137,6 +147,8 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'News App',
+      navigatorKey:
+          navigatorKey, // Global navigator key untuk notification navigation
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: lighColorScheme,
