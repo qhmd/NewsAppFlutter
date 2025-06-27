@@ -13,22 +13,22 @@ import 'comment_service.dart';
 
 Future<void> setupFCM() async {
   FirebaseMessaging messaging = FirebaseMessaging.instance;
-
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
   // Minta permission iOS (Android auto)
   await messaging.requestPermission();
   // Dapatkan token perangkat
   final token = await messaging.getToken();
-  print("🔔 FCM Token: $token");
+  print("Token Fcm: $token");
 
   final user = FirebaseAuth.instance.currentUser;
   if (user != null && token != null) {
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+    await firestore.collection('users').doc(user.uid).set({
       'fcmToken': token,
     }, SetOptions(merge: true));
   }
 
   // yang dieksekusi ketika tanpa onbackground
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
     print('Received foreground message: ${message.data}');
 
     if (message.notification != null) {
@@ -38,21 +38,37 @@ Future<void> setupFCM() async {
       final title = message.notification?.title;
       final body = message.notification?.body;
 
-      final commentUid = message.data['commentUid'];
-
       print("Judul: $title");
       print("Isi: $body");
       print("URL Berita: $newsUrl");
-      print("UID Komentar: $commentUid");
-      // Show local notification dengan payload
-      LocalNotificationService().showNotificationWithPayload(
+      print("UID Komentar: $commentId");
+
+      // Tampilkan notifikasi lokal
+      await LocalNotificationService().showNotificationWithPayload(
         id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        title: message.notification!.title ?? 'Komentar Baru',
-        body: message.notification!.body ?? '',
+        title: title ?? 'Komentar Baru',
+        body: body ?? '',
         newsUrl: newsUrl,
         commentId: commentId,
       );
+
+      // Simpan notifikasi ke Firestore
+      final data = {
+        'title': title ?? '',
+        'body': body ?? '',
+        'newsUrl': newsUrl,
+        'commentId': commentId,
+        'timestamp': Timestamp.now(),
+      };
+      print("simpan datanya");
+
+      await firestore
+          .collection('notifications')
+          .doc(FirebaseAuth.instance.currentUser!.uid)
+          .collection('history')
+          .add(data);
     }
+    
   });
 
   // // Handle when app is opened from notification (background/terminated)
@@ -87,7 +103,7 @@ void _handleNotificationNavigation(RemoteMessage message) {
 
 Future<void> navigateToComment(String newsUrl, String commentId) async {
   final context = navigatorKey.currentContext!;
-  final news =await CommentService().fetchNewsCommentData(newsUrl);
+  final news = await CommentService().fetchNewsCommentData(newsUrl);
   // Navigasi ke CommentPage dengan targetCommentId
   Navigator.push(
     context,

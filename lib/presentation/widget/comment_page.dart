@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:newsapp/data/models/bookmark.dart';
-import 'package:newsapp/presentation/widget/modal_web_view.dart';
-import 'package:newsapp/presentation/widget/news_card.dart';
+import 'package:newsapp/presentation/state/pageindex_providers.dart';
+import 'package:newsapp/presentation/widget/bookmark_toast.dart';
+import 'package:newsapp/presentation/widget/comment_tile.dart';
 import 'package:newsapp/services/send_push_notif.dart';
+import 'package:provider/provider.dart';
 
 class CommentPage extends StatefulWidget {
   final Bookmark news;
@@ -33,7 +35,6 @@ class _CommentPageState extends State<CommentPage> {
 
   bool get isEditing => editingCommentId != null;
 
-  // Untuk mapping index komentar
   Map<String, int> commentIndexMap = {};
 
   @override
@@ -54,9 +55,8 @@ class _CommentPageState extends State<CommentPage> {
                 final grouped = snapshot.data!;
                 final parents = grouped[null] ?? [];
 
-                // Reset mapping index
                 commentIndexMap.clear();
-                int globalIdx = 2; // 0: news, 1: divider
+                int globalIdx = 2;
 
                 for (var parent in parents) {
                   final parentId = parent is QueryDocumentSnapshot
@@ -72,7 +72,6 @@ class _CommentPageState extends State<CommentPage> {
                   }
                 }
 
-                // Trigger scroll setelah data siap
                 if (widget.targetCommentId != null && !hasScrolledToTarget) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     _scrollToTarget();
@@ -84,7 +83,7 @@ class _CommentPageState extends State<CommentPage> {
                   controller: _scrollController,
                   itemCount: parents.length + 2,
                   itemBuilder: (context, index) {
-                    if (index == 0) return _buildNewsBox(context);
+                    if (index == 0) return buildNewsBox(context, widget.news);
                     if (index == 1) return const Divider();
 
                     final parent = parents[index - 2];
@@ -96,23 +95,57 @@ class _CommentPageState extends State<CommentPage> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildCommentTile(
-                          parent,
+                        buildCommentTile(
+                          context: context,
+                          comment: parent,
                           isReply: false,
                           highlight: widget.targetCommentId == parentId,
-                        ),
-                        ...replies.map(
-                          (reply) {
-                            final replyId = reply is QueryDocumentSnapshot
-                                ? reply.id
-                                : reply['id'];
-                            return _buildCommentTile(
-                              reply,
-                              isReply: true,
-                              highlight: widget.targetCommentId == replyId,
-                            );
+                          currentUid: uid,
+                          onEditDelete: _handleEditDelete,
+                          onReply: (comment) {
+                            final data = comment is QueryDocumentSnapshot
+                                ? comment.data() as Map
+                                : comment;
+                            final originalParentId = data['parentId'];
+                            setState(() {
+                              replyingToCommentId =
+                                  originalParentId ??
+                                  (comment is QueryDocumentSnapshot
+                                      ? comment.id
+                                      : data['id']);
+                              replyingToUserId = data['uid'];
+                              replyingToUserName = data['name'];
+                            });
                           },
-                        ).toList(),
+                        ),
+                        ...replies.map((reply) {
+                          final replyId = reply is QueryDocumentSnapshot
+                              ? reply.id
+                              : reply['id'];
+                          return buildCommentTile(
+                            context: context,
+                            comment: reply,
+                            isReply: true,
+                            highlight: widget.targetCommentId == replyId,
+                            currentUid: uid,
+                            onEditDelete: _handleEditDelete,
+                            onReply: (comment) {
+                              final data = comment is QueryDocumentSnapshot
+                                  ? comment.data() as Map
+                                  : comment;
+                              final originalParentId = data['parentId'];
+                              setState(() {
+                                replyingToCommentId =
+                                    originalParentId ??
+                                    (comment is QueryDocumentSnapshot
+                                        ? comment.id
+                                        : data['id']);
+                                replyingToUserId = data['uid'];
+                                replyingToUserName = data['name'];
+                              });
+                            },
+                          );
+                        }).toList(),
                       ],
                     );
                   },
@@ -181,6 +214,14 @@ class _CommentPageState extends State<CommentPage> {
                 IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: () async {
+                    final uid = _auth.currentUser?.uid;
+                    if (uid == null) {
+                      final toProfile = context.read<PageIndexProvider>();
+                      showCustomToast("You have to login first");
+                      toProfile.changePage(2);
+                      return;
+                    }
+                    final userName = _auth.currentUser?.displayName ?? 'Anonim';
                     if (_controller.text.trim().isEmpty || uid == null) return;
 
                     final message = _controller.text.trim();
@@ -247,15 +288,15 @@ class _CommentPageState extends State<CommentPage> {
                           'replyToUid': newComment['replyToUid'],
                           'createdAt': FieldValue.serverTimestamp(),
                         });
-                      await _firestore
+                    await _firestore
                         .collection('newsInteractions')
                         .doc(encodedUrl)
                         .set({
-                          'originalUrl' : widget.news.url,
-                          'title' : widget.news.title,
-                          'urlImage' : widget.news.multimedia,
-                          'source' : widget.news.source,
-                          'time' : widget.news.date,
+                          'originalUrl': widget.news.url,
+                          'title': widget.news.title,
+                          'urlImage': widget.news.multimedia,
+                          'source': widget.news.source,
+                          'time': widget.news.date,
                         });
 
                     setState(() {
@@ -270,7 +311,6 @@ class _CommentPageState extends State<CommentPage> {
                           .doc(newComment['replyToUid'] as String)
                           .get();
                       final token = userDoc['fcmToken'];
-                      print("eksekusien twice");
                       if (token != null) {
                         await sendPushNotification(
                           token: token,
@@ -295,7 +335,7 @@ class _CommentPageState extends State<CommentPage> {
     if (commentIndexMap.containsKey(widget.targetCommentId)) {
       final idx = commentIndexMap[widget.targetCommentId]!;
       _scrollController.animateTo(
-        (idx * 100).toDouble(), // Estimasi tinggi item
+        (idx * 100).toDouble(),
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
@@ -315,8 +355,10 @@ class _CommentPageState extends State<CommentPage> {
       final grouped = <String?, List>{};
 
       for (var doc in snap.docs) {
-        final parentId = doc['parentId'];
-        grouped.putIfAbsent(parentId, () => []).add(doc);
+        if (doc['createdAt'] != null) {
+          final parentId = doc['parentId'];
+          grouped.putIfAbsent(parentId, () => []).add(doc);
+        }
       }
 
       for (var local in localPendingComments) {
@@ -328,147 +370,28 @@ class _CommentPageState extends State<CommentPage> {
     });
   }
 
-  String formatTimestamp(
-    BuildContext context,
-    Timestamp? timestamp, {
-    bool isEdited = false,
-  }) {
-    if (timestamp == null) return '';
-    final dt = timestamp.toDate();
-    final formatted =
-        "${TimeOfDay.fromDateTime(dt).format(context)} - ${dt.day} ${_monthName(dt.month)} ${dt.year % 100}";
-    return isEdited ? "Edited: $formatted" : formatted;
-  }
-
-  String _monthName(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'Mei',
-      'Jun',
-      'Jul',
-      'Agu',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Des',
-    ];
-    return months[month - 1];
-  }
-
-  Widget _buildNewsBox(BuildContext context) {
-    return NewsCard(
-      newsBookmarkList: widget.news,
-      onTap: () => openWebViewModal(context, widget.news.url),
-      showActions: false,
-    );
-  }
-
-  Widget _buildCommentTile(
-    dynamic comment, {
-    required bool isReply,
-    bool highlight = false,
-  }) {
-    final data = comment is QueryDocumentSnapshot
-        ? comment.data() as Map
-        : comment;
-    final photoUrl = data['photoUrl'] ?? '';
-    final name = data['name'] ?? 'No Name';
-    final message = data['message'] ?? '';
-    final uid = _auth.currentUser?.uid;
-    final isSending = data['sending'] == true;
-
-    return Padding(
-      padding: EdgeInsets.only(left: isReply ? 16.0 : 0.0, bottom: 8),
-      child: Container(
-        decoration: highlight
-            ? BoxDecoration(
-                color: Colors.yellow.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-              )
-            : null,
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundImage: (photoUrl != '') ? NetworkImage(photoUrl) : null,
-            child: (photoUrl == '') ? const Icon(Icons.person) : null,
-          ),
-          title: Text(name),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(message),
-              Text(
-                isSending
-                    ? "Sending..."
-                    : formatTimestamp(
-                        context,
-                        data['editedAt'] ?? data['createdAt'],
-                        isEdited: data.containsKey('editedAt'),
-                      ),
-                style: const TextStyle(fontSize: 10, color: Colors.grey),
-              ),
-            ],
-          ),
-          dense: true,
-          trailing: (() {
-            final data = comment is QueryDocumentSnapshot
-                ? comment.data() as Map
-                : comment as Map;
-
-            final isOwner = data['uid'] == uid;
-            final isPending = data['sending'] == true;
-
-            if (isOwner && !isPending) {
-              // Pemilik komentar yang bukan pending → bisa edit / hapus
-              return PopupMenuButton<String>(
-                onSelected: (value) => _handleEditDelete(value, comment),
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'edit', child: Text('Edit')),
-                  PopupMenuItem(value: 'delete', child: Text('Hapus')),
-                ],
-              );
-            } else {
-              // Selain itu → hanya bisa balas
-              return TextButton(
-                onPressed: () {
-                  final originalParentId = data['parentId'];
-                  setState(() {
-                    replyingToCommentId =
-                        originalParentId ??
-                        (comment is QueryDocumentSnapshot
-                            ? comment.id
-                            : data['id']);
-                    replyingToUserId = data['uid'];
-                    replyingToUserName = data['name'];
-                  });
-                },
-                child: const Text("Balas", style: TextStyle(fontSize: 12)),
-              );
-            }
-          })(),
-        ),
-      ),
-    );
-  }
-
-  void _handleEditDelete(String action, QueryDocumentSnapshot comment) async {
+  void _handleEditDelete(String action, dynamic comment) async {
     if (action == 'edit') {
-      _controller.text = comment['message'];
+      final data = comment is QueryDocumentSnapshot
+          ? comment.data() as Map
+          : comment;
+      _controller.text = data['message'];
       setState(() {
-        editingCommentId = comment.id;
+        editingCommentId = comment is QueryDocumentSnapshot
+            ? comment.id
+            : data['id'];
         replyingToCommentId = null;
         replyingToUserId = null;
         replyingToUserName = null;
       });
     } else if (action == 'delete') {
       final encodedUrl = base64Url.encode(utf8.encode(widget.news.url));
+      final id = comment is QueryDocumentSnapshot ? comment.id : comment['id'];
       await _firestore
           .collection('newsInteractions')
           .doc(encodedUrl)
           .collection('comments')
-          .doc(comment.id)
+          .doc(id)
           .delete();
       setState(() {});
     }

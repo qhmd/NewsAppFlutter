@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:newsapp/main.dart';
 import 'package:newsapp/data/models/bookmark.dart';
-import 'package:newsapp/presentation/widget/comment_page.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'setupfcm.dart';
@@ -40,7 +39,6 @@ class LocalNotificationService {
         final data = jsonDecode(payload);
         final newsUrl = data['newsUrl'];
         final commentId = data['commentId'];
-        
         
         // Navigasi ke CommentPage dengan targetCommentId
         if (navigatorKey.currentContext != null && newsUrl != null && commentId != null) {

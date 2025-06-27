@@ -26,7 +26,7 @@ class BookmarkService {
     final box = await getBox();
     final normalizedBookmark = bookmark.copyWith(
       id: bId,
-    ); // 👈 ubah id Bookmark-nya
+    ); 
 
     await box.put(bId, normalizedBookmark);
 

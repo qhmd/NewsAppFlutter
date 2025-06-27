@@ -1,9 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:english_words/english_words.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:newsapp/presentation/screens/inbox._page.dart';
 import 'package:overlay_support/overlay_support.dart';
 import 'package:provider/provider.dart';
 
@@ -15,7 +17,6 @@ import 'package:newsapp/data/models/bookmark.dart';
 
 // Presentation imports
 import 'package:newsapp/presentation/screens/home_screen.dart';
-import 'package:newsapp/presentation/screens/inbox.dart';
 import 'package:newsapp/presentation/screens/profile/profile.dart';
 
 // State providers
@@ -34,24 +35,28 @@ import 'package:newsapp/services/local_notif.dart';
 // Firebase options
 import 'firebase_options.dart';
 
+FirebaseFirestore firestore = FirebaseFirestore.instance;
+
 @pragma('vm:entry-point') // WAJIB agar tidak dihapus saat optimisasi
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Jangan tampilkan notif lokal kalau sudah ada message.notification
-  if (message.notification == null) {
-    final newsUrl = message.data['newsUrl'] ?? '';
-    final commentId = message.data['commentUid'] ?? '';
+  print("Background Notif Eksekusi");
 
-    await LocalNotificationService().init();
-    await LocalNotificationService().showNotificationWithPayload(
-      id: message.hashCode,
-      title: message.data['title'] ?? 'Komentar Baru',
-      body: message.data['body'] ?? '',
-      newsUrl: newsUrl,
-      commentId: commentId,
-    );
-  }
+  final newsUrl = message.data['newsUrl'] ?? '';
+  final commentId = message.data['commentUid'] ?? '';
+  final data = {
+    'title': message.notification?.title ?? '',
+    'body': message.notification?.body ?? '',
+    'newsUrl': newsUrl,
+    'commentId': commentId,
+    'timestamp': Timestamp.now(),
+  };
+
+  firestore
+      .collection('notifications')
+      .doc(FirebaseAuth.instance.currentUser!.uid)
+      .collection('history')
+      .add(data);
 }
-
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -66,6 +71,7 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(BookmarkAdapter());
   await Hive.openBox('bookmarkBox');
+  await setupFCM();
 
   runApp(const NewsApp());
 }
@@ -102,6 +108,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handleStartup();
     });
@@ -137,7 +144,6 @@ class _MyAppState extends State<MyApp> {
 
       // Initialize notifications and FCM
       await LocalNotificationService().init();
-      await setupFCM();
     } catch (e) {
       debugPrint('❌ Error during startup: $e');
     }
@@ -199,7 +205,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
   @override
   void initState() {
     super.initState();
-    _pages = [const HomeScreen(), const Inbox(), const Profile()];
+    _pages = [const HomeScreen(), InboxPage(), const Profile()];
   }
 
   void _onItemTapped(int index) {
