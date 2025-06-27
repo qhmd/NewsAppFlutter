@@ -48,25 +48,25 @@ class News {
 
 class NewsService {
   final String apiKey = "gtORzHRECZwa9jePeHX6R2a4wQfzOz5q";
-  final String baseUrl =
-      "https://api.nytimes.com/svc/news/v3/content/all/all.json";
+  final String baseUrl = "https://api.nytimes.com/svc/news/v3/content/";
 
   int getRandomOffset() {
-    // Buat list offset: [0, 20, 40, ..., 480]
     final List<int> offsets = List.generate(25, (index) => index * 20);
-
-    // Pilih salah satu secara acak
     final randomIndex = math.Random().nextInt(offsets.length);
-
     return offsets[randomIndex];
   }
 
-  Future<List<News>> fetchNews(int offset, [int limit = 20]) async {try {
-    final urlReal = '$baseUrl?limit=$limit&offset=$offset&api-key=$apiKey';
+  Future<List<News>> fetchNews(
+    String category,
+    int offset, [
+    int limit = 20,
+  ]) async {
+    try {
+      // Endpoint dinamis sesuai kategori
+      final urlReal =
+          '$baseUrl${category}/$category.json?limit=$limit&offset=$offset&api-key=$apiKey';
       final uri = Uri.parse(urlReal);
-      if (urlReal == null) {
-        throw ArgumentError("invalid API ${urlReal}");
-      }
+
       print("sebelum di eksekusi");
       final response = await http.get(uri);
 
@@ -76,8 +76,9 @@ class NewsService {
         return results.map((item) => News.fromJson(item)).toList();
       } else if (response.statusCode == 429) {
         showCustomToast("API limit exceeded. Try again later");
-        throw Exception('API limit exceeded. Try again later.');
+        throw Exception("API limit exceeded. Try again later");
       } else {
+        showCustomToast('Failed to load news: Status ${response.statusCode}');
         throw Exception('Failed to load news: Status ${response.statusCode}');
       }
     } on SocketException {
@@ -89,8 +90,8 @@ class NewsService {
     }
   }
 
-  Future<List<News>> getRandomNews() async {
+  Future<List<News>> getRandomNews(String category) async {
     final offset = getRandomOffset();
-    return fetchNews(offset);
+    return fetchNews(category, offset);
   }
 }

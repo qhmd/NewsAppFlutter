@@ -205,11 +205,17 @@ class _BottomNavigationState extends State<BottomNavigation> {
   @override
   void initState() {
     super.initState();
-    _pages = [const HomeScreen(), InboxPage(), const Profile()];
+    _pages = [HomeScreen(key: homeKey), InboxPage(), const Profile()];
   }
 
   void _onItemTapped(int index) {
-    context.read<PageIndexProvider>().changePage(index);
+    final currentIndex = context.read<PageIndexProvider>().currentIndex;
+    if (index == 0 && currentIndex == 0) {
+      // Jika Home sudah aktif, refresh kategori yang sedang aktif
+      homeKey.currentState?.refreshCurrentCategory();
+    } else {
+      context.read<PageIndexProvider>().changePage(index);
+    }
   }
 
   @override

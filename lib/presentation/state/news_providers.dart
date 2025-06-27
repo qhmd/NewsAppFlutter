@@ -2,57 +2,57 @@ import 'package:flutter/material.dart';
 import '../../core/constants/Api/news.dart';
 
 class NewsProvider with ChangeNotifier {
-  List<News> _news = [];
-  bool _loading = false;
-  int _offset = 0;
-  bool _hasMore = true;
+  final Map<String, List<News>> _newsByCategory = {};
+  final Map<String, bool> _loadingByCategory = {};
+  final Map<String, int> _offsetByCategory = {};
+  final Map<String, bool> _hasMoreByCategory = {};
 
-  final getRandomNewsObj = NewsService();
-  List<News> get news => _news;
-  bool get loading => _loading;
-  bool get hasMore => _hasMore;
+  final NewsService _newsService = NewsService();
 
-  Future<void> fetchNewsProv() async {
-  debugPrint('masih ada  $hasMore');
-    if (_loading || !_hasMore) return;
-    _loading = true;
+  List<News> getNews(String category) => _newsByCategory[category] ?? [];
+  bool isLoading(String category) => _loadingByCategory[category] ?? false;
+  bool hasMore(String category) => _hasMoreByCategory[category] ?? true;
+
+  Future<void> fetchNews(String category) async {
+    if (isLoading(category) || !hasMore(category)) return;
+    _loadingByCategory[category] = true;
     notifyListeners();
 
     try {
-      print("isi offset ${_offset}");
-      final newArticlesRaw = await getRandomNewsObj.fetchNews(_offset);
-      print("isi news article rat ${newArticlesRaw}");
+      final offset = _offsetByCategory[category] ?? 0;
+      final newArticlesRaw = await _newsService.fetchNews(category, offset);
       final newArticles = newArticlesRaw.where((item) => item.isValid).toList();
-      debugPrint("isi newArtikel ${newArticles.length}");
-      _news.addAll(newArticles);
-      _offset += 20;
-      _hasMore = newArticlesRaw.length == 20;
-      debugPrint("dikesekusi $_hasMore");
+
+      _newsByCategory[category] = [...getNews(category), ...newArticles];
+      _offsetByCategory[category] = offset + 20;
+      _hasMoreByCategory[category] = newArticlesRaw.length == 20;
     } catch (e) {
-      debugPrint('Error fetch news: $e');
+      debugPrint('Error fetch news for $category: $e');
     } finally {
-      _loading = false;
+      _loadingByCategory[category] = false;
       notifyListeners();
     }
   }
 
-  Future<void> refreshRandom() async {
-  debugPrint('Fetching from offset $_offset');
-
-    _loading = true;
+  Future<void> refreshNews(String category) async {
+    _loadingByCategory[category] = true;
     notifyListeners();
 
     try {
-      final randomOffset = getRandomNewsObj.getRandomOffset();
-      final randomArticles = await getRandomNewsObj.getRandomNews();
-      _news = randomArticles;
-      _offset = randomOffset;
-      _hasMore = randomArticles.length == 20;
+      final randomOffset = _newsService.getRandomOffset();
+      final randomArticles = await _newsService.fetchNews(category, randomOffset);
+      _newsByCategory[category] = randomArticles;
+      _offsetByCategory[category] = randomOffset;
+      _hasMoreByCategory[category] = randomArticles.length == 20;
     } catch (e) {
-      debugPrint('Failed to refresh: $e');
+      debugPrint('Failed to refresh $category: $e');
     } finally {
-      _loading = false;
+      _loadingByCategory[category] = false;
       notifyListeners();
     }
   }
+  void setLoading(String category, bool value) {
+  _loadingByCategory[category] = value;
+  notifyListeners();
+}
 }

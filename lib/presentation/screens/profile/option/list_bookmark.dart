@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:newsapp/data/models/bookmark.dart';
-import 'package:newsapp/presentation/screens/news/list_news.dart';
+import 'package:newsapp/presentation/screens/news/news_list_separated.dart';
 import 'package:newsapp/presentation/state/bookmark_providers.dart';
 import 'package:newsapp/presentation/state/connection_providers.dart';
 import 'package:provider/provider.dart';

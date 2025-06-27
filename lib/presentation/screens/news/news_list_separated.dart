@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:newsapp/core/utils/urlConvert.dart';
 import 'package:newsapp/data/models/bookmark.dart';
-import 'package:newsapp/presentation/state/connection_providers.dart';
 import 'package:newsapp/presentation/widget/news_card.dart';
 import 'package:newsapp/presentation/widget/modal_web_view.dart';
-import 'package:provider/provider.dart';
-import 'package:newsapp/presentation/state/auth_providers.dart';
-import 'package:newsapp/presentation/state/bookmark_providers.dart';
-import 'package:newsapp/presentation/state/pageindex_providers.dart';
-import 'package:newsapp/presentation/widget/bookmark_toast.dart';
 
 class NewsListSeparated extends StatelessWidget {
   final List newsList;
@@ -31,19 +25,17 @@ class NewsListSeparated extends StatelessWidget {
   });
 
   Bookmark _bookmark(item) {
-    print(item);
     if (item is Bookmark) {
       return item;
     }
-
+    // Asumsi item adalah model News
     return Bookmark(
       id: item.url,
       title: item.title,
       source: item.byline ?? '',
-      multimedia: (item.multimedia != null && item.multimedia!.length > 2)
-          ? item.multimedia![2]['url'] ?? ''
+      multimedia: (item.multimedia != null && item.multimedia.length > 2)
+          ? item.multimedia[2]['url'] ?? ''
           : '',
-
       date: item.published_date,
       url: item.url,
     );
@@ -51,8 +43,6 @@ class NewsListSeparated extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final checkConnection = context.read<ConnectionProvider>().isConnected;
-
     return RefreshIndicator(
       onRefresh: onRefresh ?? () async {},
       child: ListView.separated(
@@ -61,26 +51,27 @@ class NewsListSeparated extends StatelessWidget {
         itemCount: newsList.length + 1,
         itemBuilder: (context, index) {
           if (index == newsList.length) {
-            // Loading saat load more
+            // Kondisi loading saat load more
             if (hasMore && loading) {
               return const Padding(
                 padding: EdgeInsets.all(16.0),
                 child: Center(child: CircularProgressIndicator()),
               );
             }
-            // Loading saat awal masuk tanpa data dan sedang loading
+            // Kondisi loading saat awal masuk tanpa data
             else if (newsList.isEmpty && loading) {
               return const Padding(
                 padding: EdgeInsets.all(50.0),
                 child: Center(child: CircularProgressIndicator()),
               );
             }
-            // Pesan saat tidak ada koneksi dan tidak ada data
+            // Tidak ada koneksi dan tidak ada data
             else if (newsList.isEmpty && !isConnected && !loading) {
               return const Padding(
                 padding: EdgeInsets.all(50.0),
                 child: Center(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.wifi_off, size: 48, color: Colors.grey),
                       SizedBox(height: 16),
@@ -102,6 +93,18 @@ class NewsListSeparated extends StatelessWidget {
                 ),
               );
             }
+            // Tidak ada data sama sekali
+            else if (newsList.isEmpty && !loading) {
+              return const Padding(
+                padding: EdgeInsets.all(50.0),
+                child: Center(
+                  child: Text(
+                    'Tidak ada berita',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                ),
+              );
+            }
             return const SizedBox.shrink();
           }
 
@@ -111,7 +114,7 @@ class NewsListSeparated extends StatelessWidget {
             color: Colors.transparent,
             child: NewsCard(
               newsBookmarkList: bookmark,
-              onTap: () => openWebViewModal(context, item.url),
+              onTap: () => openWebViewModal(context, bookmark.url),
             ),
           );
         },
