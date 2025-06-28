@@ -61,7 +61,8 @@ dependencies:
   tuple: ^2.0.1
   firebase_messaging: ^15.2.7
   flutter_local_notifications: ^19.3.0
-  
+  image_picker: ^1.1.2
+  firebase_storage: ^12.4.7
   
 dev_dependencies:
   flutter_test:

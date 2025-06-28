@@ -1,6 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart'hide AuthProvider;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:newsapp/presentation/screens/profile/sign_in_screen.dart';
+import 'package:provider/provider.dart';
 import 'data_profile.dart';
 
 class Profile extends StatefulWidget {
@@ -22,7 +23,7 @@ class _ProfileState extends State<Profile> {
           }
           if (snapshot.hasData && snapshot.data != null) {
             debugPrint("megeksekusi ini");
-            return DataProfile(user: snapshot.data!);
+            return DataProfile(uid: snapshot.data!.uid);
           }
           return LoginScreen();
         },

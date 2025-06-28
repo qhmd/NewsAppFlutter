@@ -6,6 +6,7 @@ import 'package:newsapp/data/models/bookmark.dart';
 import 'package:newsapp/presentation/state/pageindex_providers.dart';
 import 'package:newsapp/presentation/widget/bookmark_toast.dart';
 import 'package:newsapp/presentation/widget/comment_tile.dart';
+import 'package:newsapp/services/getUserForEdit.dart';
 import 'package:newsapp/services/send_push_notif.dart';
 import 'package:provider/provider.dart';
 
@@ -40,7 +41,6 @@ class _CommentPageState extends State<CommentPage> {
   @override
   Widget build(BuildContext context) {
     final uid = _auth.currentUser?.uid;
-    final userName = _auth.currentUser?.displayName ?? 'Anonim';
 
     return Scaffold(
       appBar: AppBar(title: const Text("Komentar")),
@@ -221,8 +221,11 @@ class _CommentPageState extends State<CommentPage> {
                       toProfile.changePage(2);
                       return;
                     }
-                    final userName = _auth.currentUser?.displayName ?? 'Anonim';
-                    if (_controller.text.trim().isEmpty || uid == null) return;
+                    if (_controller.text.trim().isEmpty) return;
+                    final userDoc = await UserForEdit().getUserByUid(uid);
+                    final userData = userDoc?.data();
+                    final userName = userData?['username'] ?? 'Anonim';
+                    final photoUrl = userData?['photoURL'] ?? '';
 
                     final message = _controller.text.trim();
                     final encodedUrl = base64Url.encode(
@@ -260,7 +263,7 @@ class _CommentPageState extends State<CommentPage> {
                       'message': fullMessage,
                       'name': userName,
                       'uid': uid,
-                      'photoUrl': _auth.currentUser?.photoURL ?? '',
+                      'photoUrl': photoUrl,
                       'parentId': replyingToCommentId,
                       'replyToUid': replyingToUserId,
                       'createdAt': Timestamp.now(),
@@ -283,7 +286,7 @@ class _CommentPageState extends State<CommentPage> {
                           'message': fullMessage,
                           'name': userName,
                           'uid': uid,
-                          'photoUrl': _auth.currentUser?.photoURL ?? '',
+                          'photoUrl': photoUrl,
                           'parentId': newComment['parentId'],
                           'replyToUid': newComment['replyToUid'],
                           'createdAt': FieldValue.serverTimestamp(),

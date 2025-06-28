@@ -83,8 +83,8 @@ class LoginScreen extends StatelessWidget {
                                       ),
                                     );
                                   }  else  {
-                                    Provider.of<AuthProvider>(context, listen: false).setUser(user, context);
                                     Navigator.pop(context);
+                                    Provider.of<AuthProvider>(context, listen: false).setUser(user, context);
 
                                   }
                                 },

@@ -66,7 +66,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '726812145169',
     projectId: 'newsapp-24538',
     storageBucket: 'newsapp-24538.firebasestorage.app',
-    androidClientId: '726812145169-lm5m9neu73cnh5p48vai5nhveb7nod54.apps.googleusercontent.com',
+    androidClientId: '726812145169-11knuin38l84gd4luk7ce98qtda5fhma.apps.googleusercontent.com',
     iosClientId: '726812145169-83bahva3ud4c3oln4a95l6sgg7tn5fr8.apps.googleusercontent.com',
     iosBundleId: 'com.example.newsapp',
   );
@@ -77,7 +77,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '726812145169',
     projectId: 'newsapp-24538',
     storageBucket: 'newsapp-24538.firebasestorage.app',
-    androidClientId: '726812145169-lm5m9neu73cnh5p48vai5nhveb7nod54.apps.googleusercontent.com',
+    androidClientId: '726812145169-11knuin38l84gd4luk7ce98qtda5fhma.apps.googleusercontent.com',
     iosClientId: '726812145169-83bahva3ud4c3oln4a95l6sgg7tn5fr8.apps.googleusercontent.com',
     iosBundleId: 'com.example.newsapp',
   );
@@ -91,4 +91,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'newsapp-24538.firebasestorage.app',
     measurementId: 'G-6X9J9NGSTP',
   );
+
 }

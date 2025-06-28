@@ -1,7 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:provider/provider.dart';
+import 'package:newsapp/presentation/state/auth_providers.dart';
 
 /// A service class to handle Google Sign-In
 // and authentication using Firebase.
@@ -12,6 +15,7 @@ class AuthService {
   // GoogleSignIn instance to handle Google Sign-In.
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FacebookAuth _facebookSignIn = FacebookAuth.instance;
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   /// Signs in the user with Google and returns the authenticated Firebase [User].
   ///
@@ -35,6 +39,37 @@ class AuthService {
 
       final userCredential = await _auth.signInWithCredential(credential);
       final user = userCredential.user;
+
+      if (user != null) {
+        // Ambil username dari displayName, jika null pakai email sebelum '@'
+        String username =
+            user.displayName ??
+            (user.email != null
+                ? user.email!.split('@')[0]
+                : 'user${user.uid.substring(0, 6)}');
+
+        // Simpan ke Firestore jika belum ada
+        final userDoc = firestore.collection('users').doc(user.uid);
+        final docSnapshot = await userDoc.get();
+        if (!docSnapshot.exists) {
+          await userDoc.set({
+            'uid': user.uid,
+            'email': user.email,
+            'username': username,
+            'photoURL': user.photoURL,
+            'createdAt': FieldValue.serverTimestamp(),
+            // tambahkan field lain jika perlu
+          });
+        } else {
+          // Jika sudah ada, update data jika perlu
+          await userDoc.update({
+            'email': user.email,
+            'username': username,
+            'photoURL': user.photoURL,
+          });
+        }
+      }
+      Provider.of<AuthProvider>(context, listen: false).setUser(user, context);
       return user;
     } catch (e) {
       // debugPrint the error and return null if an exception occurs.
@@ -55,8 +90,38 @@ class AuthService {
         final userCredential = await _auth.signInWithCredential(
           facebookAuthCredential,
         );
+        final user = userCredential.user;
 
-        return userCredential.user;
+        if (user != null) {
+          // Ambil username dari displayName, jika null pakai email sebelum '@'
+          String username =
+              user.displayName ??
+              (user.email != null
+                  ? user.email!.split('@')[0]
+                  : 'user${user.uid.substring(0, 6)}');
+
+          // Simpan ke Firestore jika belum ada
+          final userDoc = firestore.collection('users').doc(user.uid);
+          final docSnapshot = await userDoc.get();
+          if (!docSnapshot.exists) {
+            await userDoc.set({
+              'uid': user.uid,
+              'email': user.email,
+              'username': username,
+              'photoURL': user.photoURL,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+          } else {
+            // Jika sudah ada, update data jika perlu
+            await userDoc.update({
+              'email': user.email,
+              'username': username,
+              'photoURL': user.photoURL,
+            });
+          }
+        }
+
+        return user;
       } else {
         debugPrint("lihat status ${facebookUser.status}");
       }

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:newsapp/core/utils/format_time.dart';
 import 'package:newsapp/presentation/widget/news_card.dart';
 import 'package:newsapp/presentation/widget/modal_web_view.dart';
+import 'package:newsapp/services/getUserForEdit.dart';
 
 Widget buildNewsBox(BuildContext context, dynamic news) {
   return NewsCard(
@@ -24,63 +25,70 @@ Widget buildCommentTile({
   final data = comment is QueryDocumentSnapshot
       ? comment.data() as Map
       : comment;
-  final photoUrl = data['photoUrl'] ?? '';
-  final name = data['name'] ?? 'No Name';
-  final message = data['message'] ?? '';
-  final isSending = data['sending'] == true;
 
-  return Padding(
-    padding: EdgeInsets.only(left: isReply ? 16.0 : 0.0, bottom: 8),
-    child: Container(
-      decoration: highlight
-          ? BoxDecoration(
-              color: Colors.yellow.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(8),
-            )
-          : null,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundImage: (photoUrl != '') ? NetworkImage(photoUrl) : null,
-          child: (photoUrl == '') ? const Icon(Icons.person) : null,
-        ),
-        title: Text(name),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(message),
-            Text(
-              isSending
-                  ? "Sending..."
-                  : formatTimestamp(
-                      context,
-                      data['editedAt'] ?? data['createdAt'],
-                      isEdited: data.containsKey('editedAt'),
-                    ),
-              style: const TextStyle(fontSize: 10, color: Colors.grey),
+  return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
+    future: UserForEdit().getUserByUid(data['uid']),
+    builder: (context, snapshot) {
+      final userDoc = snapshot.data!.data()!;
+      final photoUrl = userDoc['photoURL'] ?? '';
+      final name = userDoc['username'] ?? 'No Name';
+      final message = data['message'] ?? '';
+      final isSending = data['sending'] == true;
+
+      return Padding(
+        padding: EdgeInsets.only(left: isReply ? 16.0 : 0.0, bottom: 8),
+        child: Container(
+          decoration: highlight
+              ? BoxDecoration(
+                  color: Colors.yellow.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                )
+              : null,
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundImage: (photoUrl != '') ? NetworkImage(photoUrl) : null,
+              child: (photoUrl == '') ? const Icon(Icons.person) : null,
             ),
-          ],
-        ),
-        dense: true,
-        trailing: (() {
-          final isOwner = data['uid'] == currentUid;
-          final isPending = data['sending'] == true;
-
-          if (isOwner && !isPending) {
-            return PopupMenuButton<String>(
-              onSelected: (value) => onEditDelete(value, comment),
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'edit', child: Text('Edit')),
-                PopupMenuItem(value: 'delete', child: Text('Hapus')),
+            title: Text(name),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(message),
+                Text(
+                  isSending
+                      ? "Sending..."
+                      : formatTimestamp(
+                          context,
+                          data['editedAt'] ?? data['createdAt'],
+                          isEdited: data.containsKey('editedAt'),
+                        ),
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
               ],
-            );
-          } else {
-            return TextButton(
-              onPressed: () => onReply(comment),
-              child: const Text("Balas", style: TextStyle(fontSize: 12)),
-            );
-          }
-        })(),
-      ),
-    ),
+            ),
+            dense: true,
+            trailing: (() {
+              final isOwner = data['uid'] == currentUid;
+              final isPending = data['sending'] == true;
+
+              if (isOwner && !isPending) {
+                return PopupMenuButton<String>(
+                  onSelected: (value) => onEditDelete(value, comment),
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: 'edit', child: Text('Edit')),
+                    PopupMenuItem(value: 'delete', child: Text('Hapus')),
+                  ],
+                );
+              } else {
+                return TextButton(
+                  onPressed: () => onReply(comment),
+                  child: const Text("Balas", style: TextStyle(fontSize: 12)),
+                );
+              }
+            })(),
+          ),
+        ),
+      );
+    },
   );
 }
