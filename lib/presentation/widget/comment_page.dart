@@ -41,9 +41,17 @@ class _CommentPageState extends State<CommentPage> {
   @override
   Widget build(BuildContext context) {
     final uid = _auth.currentUser?.uid;
-
+    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text("Komentar")),
+      backgroundColor: theme.colorScheme.primaryContainer,
+      appBar: AppBar(
+        title: Text(
+          "Bookmark",
+          style: TextStyle(color: theme.colorScheme.onPrimary),
+        ),
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
+        backgroundColor: theme.colorScheme.primaryContainer,
+      ),
       body: Column(
         children: [
           Expanded(
@@ -84,7 +92,7 @@ class _CommentPageState extends State<CommentPage> {
                   itemCount: parents.length + 2,
                   itemBuilder: (context, index) {
                     if (index == 0) return buildNewsBox(context, widget.news);
-                    if (index == 1) return const Divider();
+                    if (index == 1) return const Divider(color: Colors.grey);
 
                     final parent = parents[index - 2];
                     final parentId = parent is QueryDocumentSnapshot
@@ -180,7 +188,7 @@ class _CommentPageState extends State<CommentPage> {
                 padding: const EdgeInsets.only(left: 12, top: 8),
                 child: Row(
                   children: [
-                    Text("Balas ke $replyingToUserName"),
+                    Text("Balas ke $replyingToUserName",style: TextStyle(color: theme.colorScheme.onPrimary),),
                     TextButton(
                       onPressed: () {
                         setState(() {
@@ -204,15 +212,21 @@ class _CommentPageState extends State<CommentPage> {
                   child: TextField(
                     controller: _controller,
                     maxLines: null,
+                    style: TextStyle(color: theme.colorScheme.onPrimary),
                     keyboardType: TextInputType.multiline,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: "Tulis komentar...",
                       border: OutlineInputBorder(),
+                      enabledBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey),
+                        borderRadius: BorderRadius.all(Radius.circular(10)),
+                      ),
+                      hintStyle: TextStyle(color: theme.colorScheme.onPrimary),
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send),
+                  icon: Icon(Icons.send, color: theme.colorScheme.onPrimary),
                   onPressed: () async {
                     final uid = _auth.currentUser?.uid;
                     if (uid == null) {
@@ -300,7 +314,7 @@ class _CommentPageState extends State<CommentPage> {
                           'urlImage': widget.news.multimedia,
                           'source': widget.news.source,
                           'time': widget.news.date,
-                        });
+                        }, SetOptions(merge: true));
 
                     setState(() {
                       localPendingComments.removeWhere(
@@ -396,6 +410,7 @@ class _CommentPageState extends State<CommentPage> {
           .collection('comments')
           .doc(id)
           .delete();
+      if (!mounted) return;
       setState(() {});
     }
   }

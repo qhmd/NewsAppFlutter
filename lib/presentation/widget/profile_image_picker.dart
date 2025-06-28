@@ -37,7 +37,7 @@ class ProfileImagePicker extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+              icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.onSecondary, size: 20),
               onPressed: onEdit,
               iconSize: 20,
               padding: const EdgeInsets.all(8),

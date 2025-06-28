@@ -238,10 +238,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       hintText: 'Enter a Search News',
                       hintStyle: TextStyle(color: theme.colorScheme.onPrimary),
-                      prefixIcon: const Icon(Icons.search),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: theme.colorScheme.onPrimary,
+                      ),
                       suffixIcon: searchActive
                           ? IconButton(
-                              icon: const Icon(Icons.close),
+                              icon: Icon(
+                                Icons.close,
+                                color: theme.colorScheme.onPrimary,
+                              ),
                               onPressed: _closeSearch,
                             )
                           : null,

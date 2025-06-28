@@ -53,6 +53,7 @@ class Like extends StatelessWidget {
               toProfile.changePage(2);
               return isLiked;
             }
+            print("isi dari newsUrl like${newsUrl}");
             await likeProvider.toggleLike(newsUrl);
             return !isLiked;
           },

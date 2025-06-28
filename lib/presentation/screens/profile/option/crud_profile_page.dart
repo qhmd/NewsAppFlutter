@@ -182,9 +182,17 @@ class _CrudProfilePageState extends State<CrudProfilePage> {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
+    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Profile')),
+      backgroundColor: theme.colorScheme.primaryContainer,
+      appBar: AppBar(
+        title: Text(
+          "Edit Profile",
+          style: TextStyle(color: theme.colorScheme.onPrimary),
+        ),
+        iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
+        backgroundColor: theme.colorScheme.primaryContainer,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -219,10 +227,19 @@ class _CrudProfilePageState extends State<CrudProfilePage> {
                       children: [
                         const SizedBox(height: 20),
                         TextFormField(
+                          style: TextStyle(color: theme.colorScheme.onPrimary),
                           controller: _usernameController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Username',
-                            border: OutlineInputBorder(),
+                            labelStyle: TextStyle(
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                            border: const OutlineInputBorder(),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: theme.colorScheme.onPrimary,
+                              ),
+                            ),
                           ),
                           validator: (value) =>
                               value == null || value.trim().isEmpty

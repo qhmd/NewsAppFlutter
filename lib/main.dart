@@ -205,7 +205,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
   @override
   void initState() {
     super.initState();
-    _pages = [HomeScreen(key: homeKey), InboxPage(), const Profile()];
+    _pages = [HomeScreen(key: homeKey), InboxPage(), Profile()];
   }
 
   void _onItemTapped(int index) {

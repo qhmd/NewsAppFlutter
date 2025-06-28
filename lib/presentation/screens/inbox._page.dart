@@ -74,9 +74,13 @@ class _InboxPageState extends State<InboxPage> {
           return const Center(child: CircularProgressIndicator());
         }
         final docs = snapshot.data!.docs;
-
+        print("isi docs ${docs}");
+        final theme = Theme.of(context);
         return Scaffold(
+          backgroundColor: theme.colorScheme.primaryContainer,
           appBar: AppBar(
+            backgroundColor: theme.colorScheme.primaryContainer,
+
             leading: selectionMode
                 ? IconButton(
                     icon: const Icon(Icons.arrow_back),
@@ -84,8 +88,14 @@ class _InboxPageState extends State<InboxPage> {
                   )
                 : null,
             title: selectionMode
-                ? Text('${selectedIds.length} selected')
-                : const Text('Inbox'),
+                ? Text(
+                    '${selectedIds.length} selected',
+                    style: TextStyle(color: theme.colorScheme.onPrimary),
+                  )
+                : Text(
+                    'Inbox',
+                    style: TextStyle(color: theme.colorScheme.onPrimary),
+                  ),
             actions: selectionMode
                 ? [
                     IconButton(
@@ -99,44 +109,55 @@ class _InboxPageState extends State<InboxPage> {
                   ]
                 : [],
           ),
-          body: ListView.builder(
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final doc = docs[index];
-              final data = doc.data() as Map<String, dynamic>;
-              final timestamp = data['timestamp'] as Timestamp?;
-              final formattedTime = timestamp != null
-                  ? TimeOfDay.fromDateTime(timestamp.toDate()).format(context)
-                  : '';
-              final isSelected = selectedIds.contains(doc.id);
-
-              return GestureDetector(
-                onLongPress: () => _toggleSelection(doc.id),
-                onTap: selectionMode
-                    ? () => _toggleSelection(doc.id)
-                    : () {
-                        // Aksi default jika tidak dalam mode select
-                        final newsUrl = data['newsUrl'];
-                        final commentId = data['commentId'];
-                        if (newsUrl != null &&
-                            commentId != null &&
-                            navigatorKey.currentContext != null) {
-                          navigateToComment(newsUrl, commentId);
-                        }
-                      },
-                child: Container(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                      : null,
-                  child: InboxListItem(
-                    title: data['title'] ?? '',
-                    message: data['body'] ?? '',
-                    time: formattedTime,
+          body: docs.isEmpty
+              ? Center(
+                  child: Text(
+                    'Nothing in inbox',
+                    style: TextStyle(color: theme.colorScheme.onPrimary),
                   ),
+                )
+              : ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final doc = docs[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final timestamp = data['timestamp'] as Timestamp?;
+                    final formattedTime = timestamp != null
+                        ? TimeOfDay.fromDateTime(
+                            timestamp.toDate(),
+                          ).format(context)
+                        : '';
+                    final isSelected = selectedIds.contains(doc.id);
+
+                    return GestureDetector(
+                      onLongPress: () => _toggleSelection(doc.id),
+                      onTap: selectionMode
+                          ? () => _toggleSelection(doc.id)
+                          : () {
+                              // Aksi default jika tidak dalam mode select
+                              final newsUrl = data['newsUrl'];
+                              final commentId = data['commentId'];
+                              if (newsUrl != null &&
+                                  commentId != null &&
+                                  navigatorKey.currentContext != null) {
+                                navigateToComment(newsUrl, commentId);
+                              }
+                            },
+                      child: Container(
+                        color: isSelected
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.1)
+                            : null,
+                        child: InboxListItem(
+                          title: data['title'] ?? '',
+                          message: data['body'] ?? '',
+                          time: formattedTime,
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         );
       },
     );

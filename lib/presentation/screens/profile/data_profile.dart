@@ -7,7 +7,9 @@ import 'package:newsapp/presentation/screens/profile/option/crud_profile_page.da
 import 'package:newsapp/presentation/screens/profile/option/list_bookmark.dart';
 import 'package:newsapp/presentation/state/auth_providers.dart';
 import 'package:newsapp/presentation/state/bookmark_providers.dart';
+import 'package:newsapp/presentation/state/comment_providers.dart';
 import 'package:newsapp/presentation/state/like_providers.dart';
+import 'package:newsapp/presentation/state/news_providers.dart';
 import 'package:provider/provider.dart';
 import 'package:settings_ui/settings_ui.dart';
 
@@ -21,7 +23,10 @@ class DataProfile extends StatelessWidget {
     final theme = Theme.of(context);
 
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -35,74 +40,128 @@ class DataProfile extends StatelessWidget {
         final photoURL = userData['photoURL'] ?? '';
         final email = userData['email'] ?? '';
 
+        // ...existing code...
         return SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              CircleAvatar(
-                backgroundImage: (photoURL.isNotEmpty)
-                    ? NetworkImage(photoURL)
-                    : const AssetImage('assets/images/default_avatar.png')
-                          as ImageProvider,
-                radius: 50,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                username,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: SettingsList(
-                  physics: const NeverScrollableScrollPhysics(),
-                  sections: [
-                    SettingsSection(
-                      tiles: <SettingsTile>[
-                        SettingsTile.navigation(
-                          leading: const Icon(Icons.person),
-                          title: const Text('Profile'),
-                          onPressed: (context) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const CrudProfilePage(),
-                              ),
-                            );
-                          },
+          child: ColoredBox(
+            color: theme.colorScheme.primaryContainer,
+            child: ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: 6, // 1 foto, 1 username, 4 ListTile
+              separatorBuilder: (context, index) {
+                // Hanya beri Divider antar ListTile, bukan setelah foto/username
+                if (index == 1 || index == 2 || index == 3 || index == 4) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Divider(
+                      color: theme.colorScheme.onPrimary,
+                      height: 1,
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Container(
+                    padding: EdgeInsets.only(bottom: 20),
+                    margin: EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      border: BoxBorder.all(
+                        width: 1,
+                        color: theme.colorScheme.onPrimary,
+                      ),
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 20),
+                        Center(
+                          child: CircleAvatar(
+                            backgroundImage: (photoURL.isNotEmpty)
+                                ? NetworkImage(photoURL)
+                                : const AssetImage(
+                                        'assets/images/default_avatar.png',
+                                      )
+                                      as ImageProvider,
+                            radius: 50,
+                          ),
                         ),
-                        SettingsTile.navigation(
-                          leading: const Icon(Icons.bookmark_border_outlined),
-                          title: const Text('Bookmark'),
-                          onPressed: (context) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ListBookmark(),
-                              ),
-                            );
-                          },
-                        ),
-                        SettingsTile.navigation(
-                          leading: const Icon(Icons.book),
-                          title: const Text('Offline Reading'),
-                          onPressed: (context) => debugPrint("Offline"),
-                        ),
-                        SettingsTile.navigation(
-                          leading: const Icon(Icons.logout),
-                          title: const Text('Logout'),
-                          onPressed: (context) {
-                            _dialogBuilder(context);
-                          },
+                        const SizedBox(height: 10),
+                        Center(
+                          child: Text(
+                            username,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: theme.colorScheme.onPrimary,
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-            ],
+                  );
+                }
+                if (index == 1) {
+                  return ListTile(
+                    leading: Icon(
+                      Icons.person,
+                      color: theme.colorScheme.primary,
+                    ),
+                    title: Text(
+                      'Profil',
+                      style: TextStyle(color: theme.colorScheme.onPrimary),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CrudProfilePage(),
+                        ),
+                      );
+                    },
+                  );
+                }
+                if (index == 2) {
+                  return ListTile(
+                    leading: Icon(
+                      Icons.bookmark_border,
+                      color: theme.colorScheme.primary,
+                    ),
+                    title: Text(
+                      'Bookmark',
+                      style: TextStyle(color: theme.colorScheme.onPrimary),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ListBookmark()),
+                      );
+                    },
+                  );
+                }
+                if (index == 3) {
+                  return ListTile(
+                    leading: Icon(Icons.book, color: theme.colorScheme.primary),
+                    title: Text(
+                      'Toggle',
+                      style: TextStyle(color: theme.colorScheme.onPrimary),
+                    ),
+                    onTap: () => debugPrint('Offline'),
+                  );
+                }
+                if (index == 4) {
+                  return ListTile(
+                    leading: Icon(Icons.logout, color: Colors.red),
+                    title: Text(
+                      'Logout',
+                      style: TextStyle(color: theme.colorScheme.onPrimary),
+                    ),
+                    onTap: () => _dialogBuilder(context),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
           ),
         );
       },
@@ -115,7 +174,7 @@ class DataProfile extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: theme.colorScheme.onSecondaryContainer,
+          backgroundColor: theme.colorScheme.onSecondary,
           title: Text(
             'You sure you want to logout ?',
             style: TextStyle(
@@ -147,6 +206,7 @@ class DataProfile extends StatelessWidget {
                 await AuthService().signOut();
                 authProvider.clearUser();
                 Provider.of<BookmarkProvider>(context, listen: false).clear();
+                Provider.of<CommentProvider>(context, listen: false).clear();                
                 Provider.of<LikeProvider>(context, listen: false).clear();
                 final box = await Hive.openBox<Bookmark>('bookmarks');
                 await box.clear();

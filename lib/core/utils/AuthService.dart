@@ -3,6 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:hive/hive.dart';
+import 'package:newsapp/data/models/bookmark.dart';
+import 'package:newsapp/presentation/state/bookmark_providers.dart';
+import 'package:newsapp/presentation/state/like_providers.dart';
+import 'package:newsapp/presentation/widget/bookmark_toast.dart';
 import 'package:provider/provider.dart';
 import 'package:newsapp/presentation/state/auth_providers.dart';
 
@@ -93,16 +98,36 @@ class AuthService {
         final user = userCredential.user;
 
         if (user != null) {
-          // Ambil username dari displayName, jika null pakai email sebelum '@'
-          String username =
-              user.displayName ??
-              (user.email != null
-                  ? user.email!.split('@')[0]
-                  : 'user${user.uid.substring(0, 6)}');
-
-          // Simpan ke Firestore jika belum ada
           final userDoc = firestore.collection('users').doc(user.uid);
           final docSnapshot = await userDoc.get();
+
+          // Ambil username dari displayName, jika null pakai email sebelum '@'
+          String? displayName = user.displayName;
+          String username;
+
+          // Jika displayName ada, cek apakah username sudah dipakai user lain
+          if (displayName != null && displayName.trim().isNotEmpty) {
+            final query = await firestore
+                .collection('users')
+                .where('username', isEqualTo: displayName)
+                .get();
+
+            // Jika username sudah dipakai user lain (selain user ini), pakai email
+            if (query.docs.isNotEmpty &&
+                query.docs.any((doc) => doc.id != user.uid)) {
+              username = user.email != null
+                  ? user.email!.split('@')[0]
+                  : 'user${user.uid.substring(0, 6)}';
+            } else {
+              username = displayName;
+            }
+          } else {
+            // Jika displayName null, fallback ke email atau UID
+            username = user.email != null
+                ? user.email!.split('@')[0]
+                : 'user${user.uid.substring(0, 6)}';
+          }
+          // Simpan ke Firestore jika belum ada
           if (!docSnapshot.exists) {
             await userDoc.set({
               'uid': user.uid,
@@ -129,6 +154,7 @@ class AuthService {
     } catch (e) {
       // debugPrint the error and return null if an exception occurs.
       debugPrint("Sign-in error: $e");
+      showCustomToast("Error : ${e}");
       return null;
     }
     return null;

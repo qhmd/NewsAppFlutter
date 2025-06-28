@@ -32,11 +32,13 @@ class LikeProvider with ChangeNotifier {
 
   Future<void> toggleLike(String url) async {
     final uid = _auth.currentUser?.uid;
+    print("isi uid dari toggle like ${uid}");
     if (uid == null) return;
 
     final encodedUrl = encodeUrl(url);
     final docRef = _firestore.collection('newsInteractions').doc(encodedUrl);
     final isCurrentlyLiked = _likeStatus[url] ?? false;
+    print("isi currently like ${isCurrentlyLiked}");
 
     // ✅ Optimistic Update
     if (isCurrentlyLiked) {

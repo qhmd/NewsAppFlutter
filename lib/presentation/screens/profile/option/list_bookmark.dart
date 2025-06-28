@@ -10,17 +10,33 @@ class ListBookmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isConnected = context.watch<ConnectionProvider>().isConnected;
     return Consumer<BookmarkProvider>(
       builder: (context, provider, _) {
         final List<Bookmark> bookmarks = provider.bookmark;
         print("ini dicetak gak");
-        if (bookmarks.isEmpty) {
-          return const Center(child: Text("Belum ada bookmark"));
-        }
-        return NewsListSeparated(
-          newsList: bookmarks,
-          isConnected: isConnected,
+        return Scaffold(
+          backgroundColor: theme.colorScheme.primaryContainer,
+          appBar: AppBar(
+            title: Text(
+              "Bookmark",
+              style: TextStyle(color: theme.colorScheme.onPrimary),
+            ),
+            iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
+            backgroundColor: theme.colorScheme.primaryContainer,
+          ),
+          body: bookmarks.isEmpty
+              ? Center(
+                  child: Text(
+                    "Bookmark news will show here",
+                    style: TextStyle(color: theme.colorScheme.onPrimary),
+                  ),
+                )
+              : NewsListSeparated(
+                  newsList: bookmarks,
+                  isConnected: isConnected,
+                ),
         );
       },
     );
