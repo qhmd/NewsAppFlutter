@@ -16,12 +16,16 @@ class InboxListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (title.isEmpty && message.isEmpty && time .isEmpty) {
-      return Center(
-        child: Text("Tidak ada notif"),
-      );
+    final theme = Theme.of(context).colorScheme;
+    if (title.isEmpty && message.isEmpty && time.isEmpty) {
+      return Center(child: Text("Tidak ada notif"));
     }
     return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15.0),
+        side: BorderSide(color: theme.onPrimary),
+      ),
+      color: theme.primaryContainer,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: InkWell(
         onTap: onTap,
@@ -29,10 +33,19 @@ class InboxListItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
-              CircleAvatar(
-                backgroundColor: Colors.grey[300],
-                radius: 24,
-                child: const Icon(Icons.notifications, color: Colors.white),
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle, // Pastikan bentuknya lingkaran
+                  border: Border.all(
+                    color: theme.primary, // Warna border
+                    width: 1.5, // Ketebalan border
+                  ),
+                ),
+                child: CircleAvatar(
+                  backgroundColor: theme.primaryContainer,
+                  radius: 24,
+                  child: Icon(Icons.notifications, color: theme.primary),
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -43,10 +56,10 @@ class InboxListItem extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style:  TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Colors.black87,
+                        color: theme.onPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),

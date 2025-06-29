@@ -1,7 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
+import 'package:newsapp/presentation/state/bookmark_providers.dart';
 import 'package:provider/provider.dart';
-import 'package:newsapp/core/utils/AuthService.dart';
+import 'package:newsapp/services/AuthService.dart';
 import 'package:sign_button/sign_button.dart';
 import 'package:newsapp/presentation/state/auth_providers.dart';
 
@@ -83,6 +84,7 @@ class LoginScreen extends StatelessWidget {
                                       ),
                                     );
                                   }  else  {
+                                    final setBookmark = context.read<BookmarkProvider>().syncFromCloud(user.uid);
                                     Navigator.pop(context);
                                   }
                                 },

@@ -89,7 +89,7 @@ class _InboxPageState extends State<InboxPage> {
 
             leading: selectionMode
                 ? IconButton(
-                    icon: const Icon(Icons.arrow_back),
+                    icon: Icon(Icons.arrow_back, color: theme.colorScheme.onPrimary),
                     onPressed: _clearSelection,
                   )
                 : null,
@@ -105,11 +105,11 @@ class _InboxPageState extends State<InboxPage> {
             actions: selectionMode
                 ? [
                     IconButton(
-                      icon: const Icon(Icons.select_all),
+                      icon: Icon(Icons.select_all, color: theme.colorScheme.onPrimary,),
                       onPressed: () => _selectAll(docs),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete),
+                      icon:  Icon(Icons.delete, color: theme.colorScheme.onPrimary),
                       onPressed: () => _deleteSelected(user.uid),
                     ),
                   ]
@@ -151,9 +151,7 @@ class _InboxPageState extends State<InboxPage> {
                             },
                       child: Container(
                         color: isSelected
-                            ? Theme.of(
-                                context,
-                              ).colorScheme.primary.withOpacity(0.1)
+                            ? Colors.yellow.withOpacity(0.3)
                             : null,
                         child: InboxListItem(
                           title: data['title'] ?? '',

@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:newsapp/core/utils/AuthService.dart';
+import 'package:newsapp/presentation/state/theme_provider.dart';
+import 'package:newsapp/services/AuthService.dart';
 import 'package:newsapp/data/models/bookmark.dart';
 import 'package:newsapp/presentation/screens/profile/option/crud_profile_page.dart';
 import 'package:newsapp/presentation/screens/profile/option/list_bookmark.dart';
@@ -9,161 +10,226 @@ import 'package:newsapp/presentation/state/auth_providers.dart';
 import 'package:newsapp/presentation/state/bookmark_providers.dart';
 import 'package:newsapp/presentation/state/comment_providers.dart';
 import 'package:newsapp/presentation/state/like_providers.dart';
-import 'package:newsapp/presentation/state/news_providers.dart';
 import 'package:provider/provider.dart';
 import 'package:settings_ui/settings_ui.dart';
 
-class DataProfile extends StatelessWidget {
+class DataProfile extends StatefulWidget {
   final String uid;
 
   const DataProfile({super.key, required this.uid});
 
   @override
+  State<DataProfile> createState() => _DataProfileState();
+}
+
+class _DataProfileState extends State<DataProfile> {
+  // isChecked harus mencerminkan status tema saat ini dari ThemeProvider
+  // Ini akan diinisialisasi di initState
+  bool isChecked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Inisialisasi isChecked berdasarkan tema saat ini
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentThemeMode = context.read<ThemeProvider>().themeMode;
+      setState(() {
+        // Asumsi: isChecked = true berarti tema terang, false berarti gelap.
+        // Anda mungkin perlu menyesuaikannya berdasarkan logika "toggle" yang Anda inginkan.
+        // Jika toggle berarti "dark mode ON/OFF" (true = dark, false = light/system)
+        isChecked = currentThemeMode == ThemeMode.dark;
+      });
+    });
+  }
+
+
+  @override
   Widget build(BuildContext context) {
+    // HAPUS PANGGILAN setThemeMode dari sini!
+    // if (isChecked) {
+    //   print(ThemeMode.system);
+    //   print("si set ke light");
+    //   context.read<ThemeProvider>().setThemeMode(ThemeMode.light);
+    // }
+    // context.read<ThemeProvider>().setThemeMode(ThemeMode.dark);
+
     final theme = Theme.of(context);
     final authSnap = context.watch<AuthProvider>().firestoreUserData;
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const Center(child: Text('User data not found'));
-        }
+    // Dapatkan themeProvider untuk membaca tema saat ini
+    final themeProvider = context.watch<ThemeProvider>();
 
-        final username = authSnap?['username'] ?? 'No Name';
-        final photoURL = authSnap?['photoURL'] ?? '';
-        final email = authSnap?['email'] ?? '';
 
-        // ...existing code...
-        return SafeArea(
-          child: ColoredBox(
-            color: theme.colorScheme.primaryContainer,
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: 6, // 1 foto, 1 username, 4 ListTile
-              separatorBuilder: (context, index) {
-                // Hanya beri Divider antar ListTile, bukan setelah foto/username
-                if (index == 1 || index == 2 || index == 3 || index == 4) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Divider(
-                      color: theme.colorScheme.onPrimary,
-                      height: 1,
+    final username = authSnap?['username'] ?? 'No Name';
+    final photoURL = authSnap?['photoURL'] ?? '';
+
+    return SafeArea(
+      child: ColoredBox(
+        color: theme.colorScheme.primaryContainer,
+        child: ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: 6,
+          separatorBuilder: (context, index) {
+            if (index == 1 || index == 2 || index == 3 || index == 4) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Divider(
+                  color: theme.colorScheme.onPrimary,
+                  height: 1,
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Container(
+                padding: const EdgeInsets.only(bottom: 20),
+                margin: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    width: 1,
+                    color: theme.colorScheme.onPrimary,
+                  ),
+                  borderRadius: const BorderRadius.all(Radius.circular(10)),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    Center(
+                      child: CircleAvatar(
+                        backgroundImage: (photoURL.isNotEmpty)
+                            ? NetworkImage(photoURL)
+                            : const AssetImage('assets/images/default_avatar.png')
+                                as ImageProvider,
+                        radius: 50,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Center(
+                      child: Text(
+                        username,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: theme.colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            if (index == 1) {
+              return ListTile(
+                leading: Icon(
+                  Icons.person,
+                  color: theme.colorScheme.primary,
+                ),
+                title: Text(
+                  'Profil',
+                  style: TextStyle(color: theme.colorScheme.onPrimary),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CrudProfilePage(),
                     ),
                   );
-                }
-                return const SizedBox.shrink();
-              },
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return Container(
-                    padding: EdgeInsets.only(bottom: 20),
-                    margin: EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      border: BoxBorder.all(
-                        width: 1,
-                        color: theme.colorScheme.onPrimary,
-                      ),
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                    child: Column(
+                },
+              );
+            }
+            if (index == 2) {
+              return ListTile(
+                leading: Icon(
+                  Icons.bookmark_border,
+                  color: theme.colorScheme.primary,
+                ),
+                title: Text(
+                  'Bookmark',
+                  style: TextStyle(color: theme.colorScheme.onPrimary),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ListBookmark()),
+                  );
+                },
+              );
+            }
+            if (index == 3) {
+              // Ini adalah bagian Toggle Tema Anda
+              return ListTile(
+                leading: Icon(Icons.lightbulb_outline, color: theme.colorScheme.primary), // Icon yang lebih sesuai
+                title: Text(
+                  'Mode Gelap', // Atau 'Mode Terang' tergantung logika
+                  style: TextStyle(color: theme.colorScheme.onPrimary),
+                ),
+                trailing: Container(
+                  width: 60,
+                  height: 30,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    // Warna background toggle berdasarkan tema aktif
+                    color: themeProvider.themeMode == ThemeMode.dark ? Colors.green : Colors.grey,
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                  child: InkWell(
+                    onTap: () {
+                      // Panggil toggleTheme dari ThemeProvider saat tombol ditekan
+                      // ini akan secara otomatis memperbarui themeMode di MaterialApp
+                      // dan juga menyebabkan widget ini dibangun ulang
+                      // sehingga warna toggle visual juga akan diperbarui.
+                      context.read<ThemeProvider>().toggleTheme();
+
+                      // Anda bisa opsional mengatur isChecked di sini jika Anda ingin
+                      // state _DataProfileState melacak secara lokal,
+                      // tapi lebih baik membiarkan ThemeProvider yang menjadi sumber kebenaran.
+                      // setState(() {
+                      //   isChecked = !isChecked;
+                      // });
+                    },
+                    child: Stack(
                       children: [
-                        const SizedBox(height: 20),
-                        Center(
-                          child: CircleAvatar(
-                            backgroundImage: (photoURL.isNotEmpty)
-                                ? NetworkImage(photoURL)
-                                : const AssetImage(
-                                        'assets/images/default_avatar.png',
-                                      )
-                                      as ImageProvider,
-                            radius: 50,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Center(
-                          child: Text(
-                            username,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: theme.colorScheme.onPrimary,
+                        AnimatedAlign(
+                          // Sesuaikan alignment berdasarkan themeMode dari ThemeProvider
+                          alignment: themeProvider.themeMode == ThemeMode.dark
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
                             ),
                           ),
                         ),
                       ],
                     ),
-                  );
-                }
-                if (index == 1) {
-                  return ListTile(
-                    leading: Icon(
-                      Icons.person,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: Text(
-                      'Profil',
-                      style: TextStyle(color: theme.colorScheme.onPrimary),
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CrudProfilePage(),
-                        ),
-                      );
-                    },
-                  );
-                }
-                if (index == 2) {
-                  return ListTile(
-                    leading: Icon(
-                      Icons.bookmark_border,
-                      color: theme.colorScheme.primary,
-                    ),
-                    title: Text(
-                      'Bookmark',
-                      style: TextStyle(color: theme.colorScheme.onPrimary),
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ListBookmark()),
-                      );
-                    },
-                  );
-                }
-                if (index == 3) {
-                  return ListTile(
-                    leading: Icon(Icons.book, color: theme.colorScheme.primary),
-                    title: Text(
-                      'Toggle',
-                      style: TextStyle(color: theme.colorScheme.onPrimary),
-                    ),
-                    onTap: () => debugPrint('Offline'),
-                  );
-                }
-                if (index == 4) {
-                  return ListTile(
-                    leading: Icon(Icons.logout, color: Colors.red),
-                    title: Text(
-                      'Logout',
-                      style: TextStyle(color: theme.colorScheme.onPrimary),
-                    ),
-                    onTap: () => _dialogBuilder(context),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-          ),
-        );
-      },
+                  ),
+                ),
+                // ListTile onTap untuk toggle juga bisa digunakan, tapi biasanya
+                // ketika ada trailing widget interaktif, onTap ListTile diabaikan
+                // onTap: () => debugPrint('Toggle ListTile pressed'),
+              );
+            }
+            if (index == 4) {
+              return ListTile(
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title: Text(
+                  'Logout',
+                  style: TextStyle(color: theme.colorScheme.onPrimary),
+                ),
+                onTap: () => _dialogBuilder(context),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
     );
   }
 
@@ -173,7 +239,7 @@ class DataProfile extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: theme.colorScheme.onSecondary,
+          backgroundColor: theme.colorScheme.primaryContainer,
           title: Text(
             'You sure you want to logout ?',
             style: TextStyle(
@@ -198,14 +264,12 @@ class DataProfile extends StatelessWidget {
               ),
               child: const Text('Yes, I Sure'),
               onPressed: () async {
-                final authProvider = Provider.of<AuthProvider>(
-                  context,
-                  listen: false,
-                );
+                final authProvider =
+                    Provider.of<AuthProvider>(context, listen: false);
                 await AuthService().signOut();
                 authProvider.clearUser();
                 Provider.of<BookmarkProvider>(context, listen: false).clear();
-                Provider.of<CommentProvider>(context, listen: false).clear();                
+                Provider.of<CommentProvider>(context, listen: false).clear();
                 Provider.of<LikeProvider>(context, listen: false).clear();
                 final box = await Hive.openBox<Bookmark>('bookmarks');
                 await box.clear();

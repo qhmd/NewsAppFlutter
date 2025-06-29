@@ -27,6 +27,7 @@ import 'package:newsapp/presentation/state/connection_providers.dart';
 import 'package:newsapp/presentation/state/like_providers.dart';
 import 'package:newsapp/presentation/state/news_providers.dart';
 import 'package:newsapp/presentation/state/pageindex_providers.dart';
+import 'package:newsapp/presentation/state/theme_provider.dart';
 
 // Services
 import 'package:newsapp/services/setupfcm.dart';
@@ -90,6 +91,7 @@ class NewsApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PageIndexProvider()),
         ChangeNotifierProvider(create: (_) => LikeProvider()),
         ChangeNotifierProvider(create: (_) => CommentProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => MyAppState()),
       ],
       child: OverlaySupport(child: const MyApp()),
@@ -160,6 +162,8 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+
     return MaterialApp(
       title: 'News App',
       navigatorKey:
@@ -185,6 +189,8 @@ class _MyAppState extends State<MyApp> {
           ),
         ),
       ),
+      themeMode: themeProvider.themeMode,
+
       home: const BottomNavigation(),
     );
   }
