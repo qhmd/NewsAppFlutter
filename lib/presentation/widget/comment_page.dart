@@ -1,11 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:newsapp/data/models/bookmark.dart';
+import 'package:newsapp/presentation/state/auth_providers.dart';
 import 'package:newsapp/presentation/state/pageindex_providers.dart';
 import 'package:newsapp/presentation/widget/bookmark_toast.dart';
+import 'package:newsapp/presentation/widget/comment_input_bar.dart';
 import 'package:newsapp/presentation/widget/comment_tile.dart';
+import 'package:newsapp/presentation/widget/modal_web_view.dart';
+import 'package:newsapp/presentation/widget/comment_news_header.dart';
+import 'package:newsapp/presentation/widget/news_card.dart';
 import 'package:newsapp/services/getUserForEdit.dart';
 import 'package:newsapp/services/send_push_notif.dart';
 import 'package:provider/provider.dart';
@@ -24,29 +29,137 @@ class _CommentPageState extends State<CommentPage> {
   final TextEditingController _controller = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  bool hasScrolledToTarget = false;
   final ScrollController _scrollController = ScrollController();
 
+  bool hasScrolledToTarget = false;
   String? replyingToCommentId;
   String? replyingToUserId;
   String? replyingToUserName;
   String? editingCommentId;
 
   List<Map<String, dynamic>> localPendingComments = [];
+  Map<String, int> commentIndexMap = {};
+  Map<String, Map<String, dynamic>> userCache = {};
 
   bool get isEditing => editingCommentId != null;
 
-  Map<String, int> commentIndexMap = {};
+  Future<void> _sendComment() async {
+    final auth = context.read<AuthProvider>().firestoreUserData;
+    final uid = _auth.currentUser?.uid;
+
+    if (uid == null) {
+      if (!mounted) return;
+      final toProfile = context.read<PageIndexProvider>();
+      showCustomToast("You have to login first");
+      toProfile.changePage(2);
+      return;
+    }
+    if (_controller.text.trim().isEmpty) return;
+
+    final userDoc = await UserForEdit().getUserByUid(uid);
+    final userData = userDoc?.data();
+    final userName = userData?['username'] ?? 'Anonim';
+
+    final message = _controller.text.trim();
+    final encodedUrl = base64Url.encode(utf8.encode(widget.news.url));
+
+    if (isEditing) {
+      final commentRef = _firestore
+          .collection('newsInteractions')
+          .doc(encodedUrl)
+          .collection('comments')
+          .doc(editingCommentId);
+
+      await commentRef.update({
+        'message': message,
+        'editedAt': FieldValue.serverTimestamp(),
+      });
+
+      setState(() {
+        editingCommentId = null;
+        _controller.clear();
+      });
+      return;
+    }
+
+    final mention = replyingToUserName != null ? "@$replyingToUserName " : "";
+    final fullMessage = mention + message;
+    final tempId = 'temp-${DateTime.now().millisecondsSinceEpoch}';
+
+    final newComment = {
+      'id': tempId,
+      'message': fullMessage,
+      'uid': uid,
+      'name': userName,
+      'parentId': replyingToCommentId,
+      'replyToUid': replyingToUserId,
+      'createdAt': Timestamp.now(),
+      'sending': true,
+    };
+
+    setState(() {
+      localPendingComments.add(newComment);
+      replyingToCommentId = null;
+      replyingToUserId = null;
+      replyingToUserName = null;
+      _controller.clear();
+    });
+
+    final docRef = await _firestore
+        .collection('newsInteractions')
+        .doc(encodedUrl)
+        .collection('comments')
+        .add({
+          'message': fullMessage,
+          'name': userName,
+          'uid': uid,
+          'parentId': newComment['parentId'],
+          'replyToUid': newComment['replyToUid'],
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+    // Pastikan dokumen interaksi berita ada untuk URL ini
+    await _firestore.collection('newsInteractions').doc(encodedUrl).set({
+      'originalUrl': widget.news.url,
+      'title': widget.news.title,
+      'urlImage': widget.news.multimedia,
+      'source': widget.news.source,
+      'time': widget.news.date,
+    }, SetOptions(merge: true));
+
+    setState(() {
+      localPendingComments.removeWhere((c) => c['id'] == tempId);
+    });
+
+    if (newComment['replyToUid'] != null && newComment['replyToUid'] != uid) {
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(newComment['replyToUid'] as String)
+          .get();
+      final token = userDoc['fcmToken'];
+      if (token != null) {
+        await sendPushNotification(
+          token: token,
+          title: "$userName membalas komentarmu",
+          body: message, // Gunakan 'message' asli tanpa mention
+          newsUrl: widget.news.url,
+          commendUid: docRef.id,
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.read<AuthProvider>().firestoreUserData;
     final uid = _auth.currentUser?.uid;
     final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: theme.colorScheme.primaryContainer,
       appBar: AppBar(
         title: Text(
-          "Bookmark",
+          "Komentar",
           style: TextStyle(color: theme.colorScheme.onPrimary),
         ),
         iconTheme: IconThemeData(color: theme.colorScheme.onPrimary),
@@ -55,297 +168,142 @@ class _CommentPageState extends State<CommentPage> {
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder(
+            child: StreamBuilder<Map<String?, List>>(
               stream: getGroupedCommentStream(widget.news.url),
               builder: (context, snapshot) {
                 if (!snapshot.hasData)
                   return const Center(child: CircularProgressIndicator());
+
                 final grouped = snapshot.data!;
-                final parents = grouped[null] ?? [];
+                final allComments = grouped.values.expand((e) => e).toList();
 
-                commentIndexMap.clear();
-                int globalIdx = 2;
+                final uids = {
+                  for (var c in allComments)
+                    if (c is DocumentSnapshot) c['uid'] else c['uid'],
+                };
 
-                for (var parent in parents) {
-                  final parentId = parent is QueryDocumentSnapshot
-                      ? parent.id
-                      : parent['id'];
-                  commentIndexMap[parentId] = globalIdx++;
-                  final replies = grouped[parentId] ?? [];
-                  for (var reply in replies) {
-                    final replyId = reply is QueryDocumentSnapshot
-                        ? reply.id
-                        : reply['id'];
-                    commentIndexMap[replyId] = globalIdx++;
-                  }
-                }
+                return FutureBuilder<Map<String, Map<String, dynamic>>>(
+                  future: fetchUsers(uids.whereType<String>().toList()),
+                  builder: (context, userSnap) {
+                    if (!userSnap.hasData)
+                      return const Center(child: CircularProgressIndicator());
 
-                if (widget.targetCommentId != null && !hasScrolledToTarget) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _scrollToTarget();
-                    hasScrolledToTarget = true;
-                  });
-                }
+                    userCache = userSnap.data!;
+                    final parents = grouped[null] ?? [];
 
-                return ListView.builder(
-                  controller: _scrollController,
-                  itemCount: parents.length + 2,
-                  itemBuilder: (context, index) {
-                    if (index == 0) return buildNewsBox(context, widget.news);
-                    if (index == 1) return const Divider(color: Colors.grey);
+                    commentIndexMap.clear();
+                    int globalIdx = 2;
 
-                    final parent = parents[index - 2];
-                    final parentId = parent is QueryDocumentSnapshot
-                        ? parent.id
-                        : parent['id'];
-                    final replies = grouped[parentId] ?? [];
+                    for (var parent in parents) {
+                      final parentId = parent is DocumentSnapshot
+                          ? parent.id
+                          : parent['id'];
+                      commentIndexMap[parentId] = globalIdx++;
+                      final replies = grouped[parentId] ?? [];
+                      for (var reply in replies) {
+                        final replyId = reply is DocumentSnapshot
+                            ? reply.id
+                            : reply['id'];
+                        commentIndexMap[replyId] = globalIdx++;
+                      }
+                    }
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        buildCommentTile(
-                          context: context,
-                          comment: parent,
-                          isReply: false,
-                          highlight: widget.targetCommentId == parentId,
-                          currentUid: uid,
-                          onEditDelete: _handleEditDelete,
-                          onReply: (comment) {
-                            final data = comment is QueryDocumentSnapshot
-                                ? comment.data() as Map
-                                : comment;
-                            final originalParentId = data['parentId'];
-                            setState(() {
-                              replyingToCommentId =
-                                  originalParentId ??
-                                  (comment is QueryDocumentSnapshot
-                                      ? comment.id
-                                      : data['id']);
-                              replyingToUserId = data['uid'];
-                              replyingToUserName = data['name'];
-                            });
-                          },
-                        ),
-                        ...replies.map((reply) {
-                          final replyId = reply is QueryDocumentSnapshot
-                              ? reply.id
-                              : reply['id'];
-                          return buildCommentTile(
-                            context: context,
-                            comment: reply,
-                            isReply: true,
-                            highlight: widget.targetCommentId == replyId,
-                            currentUid: uid,
-                            onEditDelete: _handleEditDelete,
-                            onReply: (comment) {
-                              final data = comment is QueryDocumentSnapshot
-                                  ? comment.data() as Map
-                                  : comment;
-                              final originalParentId = data['parentId'];
-                              setState(() {
-                                replyingToCommentId =
-                                    originalParentId ??
-                                    (comment is QueryDocumentSnapshot
-                                        ? comment.id
-                                        : data['id']);
-                                replyingToUserId = data['uid'];
-                                replyingToUserName = data['name'];
-                              });
-                            },
+                    if (widget.targetCommentId != null &&
+                        !hasScrolledToTarget) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _scrollToTarget();
+                        hasScrolledToTarget = true;
+                      });
+                    }
+
+                    return RefreshIndicator(
+                      onRefresh: _handleRefresh,
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        itemCount: parents.length + 2,
+                        itemBuilder: (context, index) {
+                          if (index == 0)
+                            return NewsHeaderWidget(news: widget.news);
+                          if (index == 1)
+                            return const Divider(color: Colors.grey);
+
+                          final parent = parents[index - 2];
+                          final parentId = parent is DocumentSnapshot
+                              ? parent.id
+                              : parent['id'];
+                          final parentUid = parent is DocumentSnapshot
+                              ? parent['uid']
+                              : parent['uid'];
+                          final replies = grouped[parentId] ?? [];
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              buildCommentTile(
+                                context: context,
+                                comment: parent,
+                                userData: userCache[parentUid],
+                                isReply: false,
+                                highlight: widget.targetCommentId == parentId,
+                                onEditDelete: _handleEditDelete,
+                                onReply: _handleReply,
+                              ),
+                              ...replies.map((reply) {
+                                final replyId = reply is DocumentSnapshot
+                                    ? reply.id
+                                    : reply['id'];
+                                final replyUid = reply is DocumentSnapshot
+                                    ? reply['uid']
+                                    : reply['uid'];
+                                return buildCommentTile(
+                                  context: context,
+                                  comment: reply,
+                                  userData: userCache[replyUid],
+                                  isReply: true,
+                                  highlight: widget.targetCommentId == replyId,
+                                  onEditDelete: _handleEditDelete,
+                                  onReply: _handleReply,
+                                );
+                              }).toList(),
+                            ],
                           );
-                        }).toList(),
-                      ],
+                        },
+                      ),
                     );
                   },
                 );
               },
             ),
           ),
-          if (isEditing)
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                children: [
-                  const Text("Mengedit komentar"),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        editingCommentId = null;
-                        _controller.clear();
-                      });
-                    },
-                    child: const Text("Batal"),
-                  ),
-                ],
-              ),
-            ),
-          if (replyingToUserName != null)
-            Container(
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey, width: 1)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.only(left: 12, top: 8),
-                child: Row(
-                  children: [
-                    Text("Balas ke $replyingToUserName",style: TextStyle(color: theme.colorScheme.onPrimary),),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          replyingToCommentId = null;
-                          replyingToUserId = null;
-                          replyingToUserName = null;
-                        });
-                      },
-                      child: const Text("Batal"),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    maxLines: null,
-                    style: TextStyle(color: theme.colorScheme.onPrimary),
-                    keyboardType: TextInputType.multiline,
-                    decoration: InputDecoration(
-                      hintText: "Tulis komentar...",
-                      border: OutlineInputBorder(),
-                      enabledBorder: const OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.grey),
-                        borderRadius: BorderRadius.all(Radius.circular(10)),
-                      ),
-                      hintStyle: TextStyle(color: theme.colorScheme.onPrimary),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.send, color: theme.colorScheme.onPrimary),
-                  onPressed: () async {
-                    final uid = _auth.currentUser?.uid;
-                    if (uid == null) {
-                      final toProfile = context.read<PageIndexProvider>();
-                      showCustomToast("You have to login first");
-                      toProfile.changePage(2);
-                      return;
-                    }
-                    if (_controller.text.trim().isEmpty) return;
-                    final userDoc = await UserForEdit().getUserByUid(uid);
-                    final userData = userDoc?.data();
-                    final userName = userData?['username'] ?? 'Anonim';
-                    final photoUrl = userData?['photoURL'] ?? '';
-
-                    final message = _controller.text.trim();
-                    final encodedUrl = base64Url.encode(
-                      utf8.encode(widget.news.url),
-                    );
-
-                    if (isEditing) {
-                      final commentRef = _firestore
-                          .collection('newsInteractions')
-                          .doc(encodedUrl)
-                          .collection('comments')
-                          .doc(editingCommentId);
-
-                      await commentRef.update({
-                        'message': message,
-                        'editedAt': FieldValue.serverTimestamp(),
-                      });
-
-                      setState(() {
-                        editingCommentId = null;
-                        _controller.clear();
-                      });
-                      return;
-                    }
-
-                    final mention = replyingToUserName != null
-                        ? "@$replyingToUserName "
-                        : "";
-                    final fullMessage = mention + message;
-                    final tempId =
-                        'temp-${DateTime.now().millisecondsSinceEpoch}';
-
-                    final newComment = {
-                      'id': tempId,
-                      'message': fullMessage,
-                      'name': userName,
-                      'uid': uid,
-                      'photoUrl': photoUrl,
-                      'parentId': replyingToCommentId,
-                      'replyToUid': replyingToUserId,
-                      'createdAt': Timestamp.now(),
-                      'sending': true,
-                    };
-
-                    setState(() {
-                      localPendingComments.add(newComment);
-                      replyingToCommentId = null;
-                      replyingToUserId = null;
-                      replyingToUserName = null;
-                      _controller.clear();
-                    });
-
-                    final docRef = await _firestore
-                        .collection('newsInteractions')
-                        .doc(encodedUrl)
-                        .collection('comments')
-                        .add({
-                          'message': fullMessage,
-                          'name': userName,
-                          'uid': uid,
-                          'photoUrl': photoUrl,
-                          'parentId': newComment['parentId'],
-                          'replyToUid': newComment['replyToUid'],
-                          'createdAt': FieldValue.serverTimestamp(),
-                        });
-                    await _firestore
-                        .collection('newsInteractions')
-                        .doc(encodedUrl)
-                        .set({
-                          'originalUrl': widget.news.url,
-                          'title': widget.news.title,
-                          'urlImage': widget.news.multimedia,
-                          'source': widget.news.source,
-                          'time': widget.news.date,
-                        }, SetOptions(merge: true));
-
-                    setState(() {
-                      localPendingComments.removeWhere(
-                        (c) => c['id'] == tempId,
-                      );
-                    });
-                    if (newComment['replyToUid'] != null &&
-                        newComment['replyToUid'] != uid) {
-                      final userDoc = await _firestore
-                          .collection('users')
-                          .doc(newComment['replyToUid'] as String)
-                          .get();
-                      final token = userDoc['fcmToken'];
-                      if (token != null) {
-                        await sendPushNotification(
-                          token: token,
-                          title: "$userName membalas komentarmu",
-                          body: message,
-                          newsUrl: widget.news.url,
-                          commendUid: docRef.id,
-                        );
-                      }
-                    }
-                  },
-                ),
-              ],
-            ),
+          CommentInputBar(
+            controller: _controller,
+            isEditing: isEditing,
+            replyingToUserName: replyingToUserName,
+            onCancelEdit: () {
+              setState(() {
+                editingCommentId = null;
+                _controller.clear();
+              });
+            },
+            onCancelReply: () {
+              setState(() {
+                replyingToCommentId = null;
+                replyingToUserId = null;
+                replyingToUserName = null;
+              });
+            },
+            onSend:
+                _sendComment, // Panggil method _sendComment yang baru dibuat
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() {
+      hasScrolledToTarget = false;
+    });
   }
 
   void _scrollToTarget() {
@@ -370,31 +328,44 @@ class _CommentPageState extends State<CommentPage> {
 
     return firestoreStream.map((snap) {
       final grouped = <String?, List>{};
-
       for (var doc in snap.docs) {
         if (doc['createdAt'] != null) {
           final parentId = doc['parentId'];
           grouped.putIfAbsent(parentId, () => []).add(doc);
         }
       }
-
       for (var local in localPendingComments) {
         final parentId = local['parentId'];
         grouped.putIfAbsent(parentId, () => []).add(local);
       }
-
       return grouped;
     });
   }
 
+  Future<Map<String, Map<String, dynamic>>> fetchUsers(
+    List<String> uids,
+  ) async {
+    if (uids.isEmpty) return {};
+    final snapshot = await _firestore
+        .collection('users')
+        .where(FieldPath.documentId, whereIn: uids.toSet().toList())
+        .get();
+
+    final result = <String, Map<String, dynamic>>{};
+    for (var doc in snapshot.docs) {
+      result[doc.id] = doc.data();
+    }
+    return result;
+  }
+
   void _handleEditDelete(String action, dynamic comment) async {
     if (action == 'edit') {
-      final data = comment is QueryDocumentSnapshot
+      final data = comment is DocumentSnapshot
           ? comment.data() as Map
           : comment;
       _controller.text = data['message'];
       setState(() {
-        editingCommentId = comment is QueryDocumentSnapshot
+        editingCommentId = comment is DocumentSnapshot
             ? comment.id
             : data['id'];
         replyingToCommentId = null;
@@ -403,7 +374,7 @@ class _CommentPageState extends State<CommentPage> {
       });
     } else if (action == 'delete') {
       final encodedUrl = base64Url.encode(utf8.encode(widget.news.url));
-      final id = comment is QueryDocumentSnapshot ? comment.id : comment['id'];
+      final id = comment is DocumentSnapshot ? comment.id : comment['id'];
       await _firestore
           .collection('newsInteractions')
           .doc(encodedUrl)
@@ -413,5 +384,17 @@ class _CommentPageState extends State<CommentPage> {
       if (!mounted) return;
       setState(() {});
     }
+  }
+
+  void _handleReply(dynamic comment) {
+    final data = comment is DocumentSnapshot ? comment.data() as Map : comment;
+    final originalParentId = data['parentId'];
+    setState(() {
+      replyingToCommentId =
+          originalParentId ??
+          (comment is DocumentSnapshot ? comment.id : data['id']);
+      replyingToUserId = data['uid'];
+      replyingToUserName = data['name'];
+    });
   }
 }

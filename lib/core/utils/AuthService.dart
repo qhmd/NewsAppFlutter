@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -46,35 +47,56 @@ class AuthService {
       final user = userCredential.user;
 
       if (user != null) {
-        // Ambil username dari displayName, jika null pakai email sebelum '@'
-        String username =
-            user.displayName ??
-            (user.email != null
-                ? user.email!.split('@')[0]
-                : 'user${user.uid.substring(0, 6)}');
+        final userDocRef = firestore.collection('users').doc(user.uid);
+        final docSnapshot = await userDocRef.get();
+        final fcmToken = await FirebaseMessaging.instance.getToken();
+        final displayName = user.displayName;
+        final email = user.email;
+        final fallbackUsername = email != null
+            ? email.split('@')[0]
+            : 'user${user.uid.substring(0, 6)}';
 
-        // Simpan ke Firestore jika belum ada
-        final userDoc = firestore.collection('users').doc(user.uid);
-        final docSnapshot = await userDoc.get();
+        // Cek apakah username sudah dipakai user lain
+        final usernameQuery = await firestore
+            .collection('users')
+            .where('username', isEqualTo: displayName)
+            .get();
+
+        Map<String, dynamic> userData;
+
         if (!docSnapshot.exists) {
-          await userDoc.set({
+          final isUsernameTaken = usernameQuery.docs.isNotEmpty;
+
+          userData = {
             'uid': user.uid,
-            'email': user.email,
-            'username': username,
+            'email': email,
+            'username': isUsernameTaken ? fallbackUsername : displayName,
             'photoURL': user.photoURL,
+            'fcmToken': fcmToken,
             'createdAt': FieldValue.serverTimestamp(),
-            // tambahkan field lain jika perlu
-          });
+          };
+
+          await userDocRef.set(userData);
         } else {
-          // Jika sudah ada, update data jika perlu
-          await userDoc.update({
-            'email': user.email,
-            'username': username,
-            'photoURL': user.photoURL,
-          });
+          final existingUsername = docSnapshot['username'];
+          final existingPhotoURL = docSnapshot['photoURL'];
+
+          userData = {
+            'uid': user.uid,
+            'email': email,
+            'username': existingUsername,
+            'photoURL': existingPhotoURL,
+            'fcmToken': fcmToken,
+          };
+
+          await userDocRef.set(userData, SetOptions(merge: true));
         }
+
+        // Kirim ke AuthProvider
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        authProvider.setUser(user : user,userData: userData, context: context);
+
       }
-      Provider.of<AuthProvider>(context, listen: false).setUser(user, context);
       return user;
     } catch (e) {
       // debugPrint the error and return null if an exception occurs.
@@ -98,52 +120,49 @@ class AuthService {
         final user = userCredential.user;
 
         if (user != null) {
-          final userDoc = firestore.collection('users').doc(user.uid);
-          final docSnapshot = await userDoc.get();
+          final userDocRef = firestore.collection('users').doc(user.uid);
+          final docSnapshot = await userDocRef.get();
+          final fcmToken = await FirebaseMessaging.instance.getToken();
+          final displayName = user.displayName;
+          final email = user.email;
+          final fallbackUsername = email != null
+              ? email.split('@')[0]
+              : 'user${user.uid.substring(0, 6)}';
 
-          // Ambil username dari displayName, jika null pakai email sebelum '@'
-          String? displayName = user.displayName;
-          String username;
+          // Cek apakah username sudah dipakai user lain
+          final usernameQuery = await firestore
+              .collection('users')
+              .where('username', isEqualTo: displayName)
+              .get();
 
-          // Jika displayName ada, cek apakah username sudah dipakai user lain
-          if (displayName != null && displayName.trim().isNotEmpty) {
-            final query = await firestore
-                .collection('users')
-                .where('username', isEqualTo: displayName)
-                .get();
-
-            // Jika username sudah dipakai user lain (selain user ini), pakai email
-            if (query.docs.isNotEmpty &&
-                query.docs.any((doc) => doc.id != user.uid)) {
-              username = user.email != null
-                  ? user.email!.split('@')[0]
-                  : 'user${user.uid.substring(0, 6)}';
-            } else {
-              username = displayName;
-            }
-          } else {
-            // Jika displayName null, fallback ke email atau UID
-            username = user.email != null
-                ? user.email!.split('@')[0]
-                : 'user${user.uid.substring(0, 6)}';
-          }
-          // Simpan ke Firestore jika belum ada
           if (!docSnapshot.exists) {
-            await userDoc.set({
+            final isUsernameTakenByOthers = usernameQuery.docs.isNotEmpty;
+
+            final dataToSave = {
               'uid': user.uid,
-              'email': user.email,
-              'username': username,
+              'email': email,
+              'username': isUsernameTakenByOthers
+                  ? fallbackUsername
+                  : displayName,
               'photoURL': user.photoURL,
+              'fcmToken': fcmToken,
               'createdAt': FieldValue.serverTimestamp(),
-            });
+            };
+
+            await userDocRef.set(dataToSave);
           } else {
-            // Jika sudah ada, update data jika perlu
-            await userDoc.update({
-              'email': user.email,
-              'username': username,
-              'photoURL': user.photoURL,
-            });
+            final existingUsername = docSnapshot['username'];
+            final existingPhotoURL = docSnapshot['photoURL'];
+
+            final dataToUpdate = {
+              'username': existingUsername,
+              'photoURL': existingPhotoURL,
+              'fcmToken': fcmToken,
+            };
+
+            await userDocRef.set(dataToUpdate, SetOptions(merge: true));
           }
+          // Optional: listen for token refresh
         }
 
         return user;

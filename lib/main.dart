@@ -130,10 +130,19 @@ class _MyAppState extends State<MyApp> {
       }
 
       // Setup Firebase Auth state listener
-      FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      FirebaseAuth.instance.authStateChanges().listen((User? user) async {
         try {
           if (user != null) {
-            authProvider.setUser(user, context);
+            final userDoc = await firestore
+                .collection('users')
+                .doc(user.uid)
+                .get();
+            final userData = userDoc.data();
+            authProvider.setUser(
+              user: user,
+              userData: userData,
+              context: context,
+            );
           } else {
             authProvider.clearUser();
           }

@@ -22,7 +22,6 @@ class _ProfileState extends State<Profile> {
             return Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasData && snapshot.data != null) {
-            debugPrint("megeksekusi ini");
             return DataProfile(uid: snapshot.data!.uid);
           }
           return LoginScreen();

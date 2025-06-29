@@ -58,9 +58,15 @@ class _InboxPageState extends State<InboxPage> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.read<AuthProvider>().user;
+    final theme = Theme.of(context);
+    final user = context.watch<AuthProvider>().user;
     if (user == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Text(
+          "Login to accest this is page",
+          style: TextStyle(color: theme.colorScheme.onPrimary),
+        ),
+      );
     }
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance

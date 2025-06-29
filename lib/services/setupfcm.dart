@@ -17,59 +17,62 @@ Future<void> setupFCM() async {
   // Minta permission iOS (Android auto)
   await messaging.requestPermission();
   // Dapatkan token perangkat
-  final token = await messaging.getToken();
-  print("Token Fcm: $token");
+  try {
+    final token = await messaging.getToken();
+    print("Token Fcm: $token");
 
-  final user = FirebaseAuth.instance.currentUser;
-  if (user != null && token != null) {
-    await firestore.collection('users').doc(user.uid).set({
-      'fcmToken': token,
-    }, SetOptions(merge: true));
-  }
-
-  // yang dieksekusi ketika tanpa onbackground
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-    print('Received foreground message: ${message.data}');
-
-    if (message.notification != null) {
-      final newsUrl = message.data['newsUrl'] ?? '';
-      final commentId = message.data['commentUid'] ?? '';
-
-      final title = message.notification?.title;
-      final body = message.notification?.body;
-
-      print("Judul: $title");
-      print("Isi: $body");
-      print("URL Berita: $newsUrl");
-      print("UID Komentar: $commentId");
-
-      // Tampilkan notifikasi lokal
-      await LocalNotificationService().showNotificationWithPayload(
-        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        title: title ?? 'Komentar Baru',
-        body: body ?? '',
-        newsUrl: newsUrl,
-        commentId: commentId,
-      );
-
-      // Simpan notifikasi ke Firestore
-      final data = {
-        'title': title ?? '',
-        'body': body ?? '',
-        'newsUrl': newsUrl,
-        'commentId': commentId,
-        'timestamp': Timestamp.now(),
-      };
-      print("simpan datanya");
-
-      await firestore
-          .collection('notifications')
-          .doc(FirebaseAuth.instance.currentUser!.uid)
-          .collection('history')
-          .add(data);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && token != null) {
+      await firestore.collection('users').doc(user.uid).set({
+        'fcmToken': token,
+      }, SetOptions(merge: true));
     }
-    
-  });
+
+    // yang dieksekusi ketika tanpa onbackground
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      print('Received foreground message: ${message.data}');
+
+      if (message.notification != null) {
+        final newsUrl = message.data['newsUrl'] ?? '';
+        final commentId = message.data['commentUid'] ?? '';
+
+        final title = message.notification?.title;
+        final body = message.notification?.body;
+
+        print("Judul: $title");
+        print("Isi: $body");
+        print("URL Berita: $newsUrl");
+        print("UID Komentar: $commentId");
+
+        // Tampilkan notifikasi lokal
+        await LocalNotificationService().showNotificationWithPayload(
+          id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          title: title ?? 'Komentar Baru',
+          body: body ?? '',
+          newsUrl: newsUrl,
+          commentId: commentId,
+        );
+
+        // Simpan notifikasi ke Firestore
+        final data = {
+          'title': title ?? '',
+          'body': body ?? '',
+          'newsUrl': newsUrl,
+          'commentId': commentId,
+          'timestamp': Timestamp.now(),
+        };
+        print("simpan datanya");
+
+        await firestore
+            .collection('notifications')
+            .doc(FirebaseAuth.instance.currentUser!.uid)
+            .collection('history')
+            .add(data);
+      }
+    });
+  } catch (e) {
+    throw Exception("Failed to get token ${e}");
+  }
 
   // // Handle when app is opened from notification (background/terminated)
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {

@@ -21,7 +21,7 @@ class DataProfile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
+    final authSnap = context.watch<AuthProvider>().firestoreUserData;
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('users')
@@ -35,10 +35,9 @@ class DataProfile extends StatelessWidget {
           return const Center(child: Text('User data not found'));
         }
 
-        final userData = snapshot.data!.data() as Map<String, dynamic>;
-        final username = userData['username'] ?? 'No Name';
-        final photoURL = userData['photoURL'] ?? '';
-        final email = userData['email'] ?? '';
+        final username = authSnap?['username'] ?? 'No Name';
+        final photoURL = authSnap?['photoURL'] ?? '';
+        final email = authSnap?['email'] ?? '';
 
         // ...existing code...
         return SafeArea(

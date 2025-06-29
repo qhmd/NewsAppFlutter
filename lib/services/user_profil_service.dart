@@ -2,6 +2,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:newsapp/presentation/widget/comment_tile.dart';
 
 class UserService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -24,7 +25,8 @@ class UserService {
         .where('username', isEqualTo: username)
         .get();
 
-    return query.docs.isEmpty || (query.docs.length == 1 && query.docs.first.id == user.uid);
+    return query.docs.isEmpty ||
+        (query.docs.length == 1 && query.docs.first.id == user.uid);
   }
 
   Future<void> updateProfile({
@@ -35,6 +37,7 @@ class UserService {
     final user = currentUser;
     if (user == null) return;
     await _firestore.collection('users').doc(user.uid).update({
+      'updatedAt': DateTime.now().toIso8601String(),
       'username': username,
       if (photoURL != null) 'photoURL': photoURL,
       if (deleteHash != null) 'deleteHash': deleteHash,

@@ -1,13 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:image_picker/image_picker.dart';
+import 'package:newsapp/presentation/state/auth_providers.dart';
 import 'package:newsapp/presentation/widget/profile_image_picker.dart';
 import 'dart:io';
 
 import 'package:newsapp/services/imgur_service.dart';
 import 'package:newsapp/presentation/widget/bookmark_toast.dart';
 import 'package:newsapp/services/user_profil_service.dart';
+import 'package:provider/provider.dart';
 
 class CrudProfilePage extends StatefulWidget {
   const CrudProfilePage({super.key});
@@ -132,6 +134,11 @@ class _CrudProfilePageState extends State<CrudProfilePage> {
       if (mounted) {
         Navigator.pop(context);
         showCustomToast("Profile updated successfully");
+        final authProvider = context.read<AuthProvider>();
+        authProvider.setUserData({
+          'username': username,
+          'photoURL': newPhotoUrl,
+        });
       }
     } catch (e) {
       setState(() {

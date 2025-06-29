@@ -84,8 +84,6 @@ class LoginScreen extends StatelessWidget {
                                     );
                                   }  else  {
                                     Navigator.pop(context);
-                                    Provider.of<AuthProvider>(context, listen: false).setUser(user, context);
-
                                   }
                                 },
                               ),
@@ -106,7 +104,6 @@ class LoginScreen extends StatelessWidget {
                                       ),
                                     );
                                   } else {
-                                    await Provider.of<AuthProvider>(context, listen: false).setUser(user, context);
                                     Navigator.pop(context);
                                   }
                                 },
