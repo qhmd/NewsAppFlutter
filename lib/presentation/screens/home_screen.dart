@@ -51,7 +51,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    // Pastikan fokus hilang sebelum dispose
     _searchFocusNode.unfocus();
     _searchFocusNode.removeListener(() {});
     _searchFocusNode.dispose();
@@ -285,7 +284,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> refreshCurrentCategory() async {
     final currentCategoryIndex = _tabController.index;
     final category = options[currentCategoryIndex].toLowerCase();
-    final provider = context.read<NewsProvider>();
 
     // Scroll ke atas
     _scrollController.animateTo(
@@ -299,13 +297,5 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _searchController.clear();
     });
 
-    // Tampilkan loading
-    provider.setLoading(category, true);
-
-    // Fetch ulang berita kategori yang aktif
-    await provider.refreshNews(category);
-
-    // Sembunyikan loading setelah selesai
-    provider.setLoading(category, false);
   }
 }

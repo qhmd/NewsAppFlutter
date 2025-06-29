@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:newsapp/presentation/state/auth_providers.dart';
 import 'package:newsapp/presentation/widget/profile_image_picker.dart';
 import 'dart:io';
@@ -26,11 +27,11 @@ class _CrudProfilePageState extends State<CrudProfilePage> {
   String? _photoURL;
   String? _deleteHash;
   DateTime? _createdAt;
+  DateTime? _updateAt;
 
   String? _error;
   bool _loading = false;
 
-  final _auth = FirebaseAuth.instance;
   final _userService = UserService();
 
   @override
@@ -51,12 +52,15 @@ class _CrudProfilePageState extends State<CrudProfilePage> {
       final userDoc = await _userService.getUserDoc();
       final rawData = userDoc.data();
       if (rawData != null) {
-        final data = rawData as Map<String, dynamic>; // lakukan casting
+        final data = rawData as Map<String, dynamic>; 
         _usernameController.text = data['username'] ?? '';
         _photoURL = data['photoURL'];
         _deleteHash = data['deleteHash'];
-        final ts = data['createdAt'];
-        if (ts is Timestamp) _createdAt = ts.toDate();
+        final ca = data['createdAt'];
+        String ua = data['updatedAt'] ?? '';
+        print(ua);
+        if (ca is Timestamp) _createdAt = ca.toDate();
+        if (ua.isNotEmpty) _updateAt = DateTime.tryParse(ua);
       }
     } catch (e) {
       _error = 'Failed to load profile: $e';
@@ -148,25 +152,14 @@ class _CrudProfilePageState extends State<CrudProfilePage> {
     }
   }
 
-  Future<void> _deleteAccount() async {
-    setState(() => _loading = true);
-    try {
-      await _userService.deleteUserData();
-      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
-    } catch (e) {
-      setState(() {
-        _error = "Gagal menghapus akun: $e";
-        _loading = false;
-      });
-    }
-  }
+  
 
-  void _showDeleteConfirmation() {
+  void _showSaveConfirmation() {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: const Text('This action cannot be undone.'),
+        title: const Text('Confirm Save'),
+        content: const Text('Sure to Save This ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -175,9 +168,9 @@ class _CrudProfilePageState extends State<CrudProfilePage> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _deleteAccount();
+              _saveProfile();
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Save', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -189,6 +182,10 @@ class _CrudProfilePageState extends State<CrudProfilePage> {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    print("waktu sekarang ${_createdAt}");
+    String createAt = DateFormat('dd/MM/yy, HH:mm').format(_createdAt!);
+    print("isi di sini ${_updateAt}");
+    String updateAt = _updateAt != null ? DateFormat('dd/MM/yy, HH:mm').format(_updateAt!) : '-';
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.colorScheme.primaryContainer,
@@ -205,6 +202,8 @@ class _CrudProfilePageState extends State<CrudProfilePage> {
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               if (_error != null)
                 Container(
@@ -257,7 +256,7 @@ class _CrudProfilePageState extends State<CrudProfilePage> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _saveProfile,
+                            onPressed: _showSaveConfirmation,
                             child: const Text("Save"),
                           ),
                         ),
@@ -266,14 +265,14 @@ class _CrudProfilePageState extends State<CrudProfilePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 40),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _showDeleteConfirmation,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  child: const Text("Delete Account"),
-                ),
+              const SizedBox(height: 20),
+              Text(
+                "Create at : ${createAt} ",
+                style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                "Updated at : ${updateAt}",
+                style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),

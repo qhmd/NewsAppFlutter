@@ -30,34 +30,20 @@ class _DataProfileState extends State<DataProfile> {
   @override
   void initState() {
     super.initState();
-    // Inisialisasi isChecked berdasarkan tema saat ini
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentThemeMode = context.read<ThemeProvider>().themeMode;
       setState(() {
-        // Asumsi: isChecked = true berarti tema terang, false berarti gelap.
-        // Anda mungkin perlu menyesuaikannya berdasarkan logika "toggle" yang Anda inginkan.
-        // Jika toggle berarti "dark mode ON/OFF" (true = dark, false = light/system)
         isChecked = currentThemeMode == ThemeMode.dark;
       });
     });
   }
 
-
   @override
   Widget build(BuildContext context) {
-    // HAPUS PANGGILAN setThemeMode dari sini!
-    // if (isChecked) {
-    //   print(ThemeMode.system);
-    //   print("si set ke light");
-    //   context.read<ThemeProvider>().setThemeMode(ThemeMode.light);
-    // }
-    // context.read<ThemeProvider>().setThemeMode(ThemeMode.dark);
-
     final theme = Theme.of(context);
     final authSnap = context.watch<AuthProvider>().firestoreUserData;
     // Dapatkan themeProvider untuk membaca tema saat ini
     final themeProvider = context.watch<ThemeProvider>();
-
 
     final username = authSnap?['username'] ?? 'No Name';
     final photoURL = authSnap?['photoURL'] ?? '';
@@ -72,10 +58,7 @@ class _DataProfileState extends State<DataProfile> {
             if (index == 1 || index == 2 || index == 3 || index == 4) {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Divider(
-                  color: theme.colorScheme.onPrimary,
-                  height: 1,
-                ),
+                child: Divider(color: theme.colorScheme.onPrimary, height: 1),
               );
             }
             return const SizedBox.shrink();
@@ -99,8 +82,10 @@ class _DataProfileState extends State<DataProfile> {
                       child: CircleAvatar(
                         backgroundImage: (photoURL.isNotEmpty)
                             ? NetworkImage(photoURL)
-                            : const AssetImage('assets/images/default_avatar.png')
-                                as ImageProvider,
+                            : const AssetImage(
+                                    'assets/images/default_avatar.png',
+                                  )
+                                  as ImageProvider,
                         radius: 50,
                       ),
                     ),
@@ -121,10 +106,7 @@ class _DataProfileState extends State<DataProfile> {
             }
             if (index == 1) {
               return ListTile(
-                leading: Icon(
-                  Icons.person,
-                  color: theme.colorScheme.primary,
-                ),
+                leading: Icon(Icons.person, color: theme.colorScheme.primary),
                 title: Text(
                   'Profil',
                   style: TextStyle(color: theme.colorScheme.onPrimary),
@@ -132,9 +114,7 @@ class _DataProfileState extends State<DataProfile> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const CrudProfilePage(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const CrudProfilePage()),
                   );
                 },
               );
@@ -160,9 +140,12 @@ class _DataProfileState extends State<DataProfile> {
             if (index == 3) {
               // Ini adalah bagian Toggle Tema Anda
               return ListTile(
-                leading: Icon(Icons.lightbulb_outline, color: theme.colorScheme.primary), // Icon yang lebih sesuai
+                leading: Icon(
+                  Icons.lightbulb_outline,
+                  color: theme.colorScheme.primary,
+                ), // Icon yang lebih sesuai
                 title: Text(
-                  'Mode Gelap', // Atau 'Mode Terang' tergantung logika
+                  'Change Mode', // Atau 'Mode Terang' tergantung logika
                   style: TextStyle(color: theme.colorScheme.onPrimary),
                 ),
                 trailing: Container(
@@ -170,24 +153,14 @@ class _DataProfileState extends State<DataProfile> {
                   height: 30,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
-                    // Warna background toggle berdasarkan tema aktif
-                    color: themeProvider.themeMode == ThemeMode.dark ? Colors.green : Colors.grey,
+                    color: themeProvider.themeMode == ThemeMode.dark
+                        ? const Color.fromARGB(255, 255, 0, 0)
+                        : Colors.grey,
                     borderRadius: BorderRadius.circular(40),
                   ),
                   child: InkWell(
                     onTap: () {
-                      // Panggil toggleTheme dari ThemeProvider saat tombol ditekan
-                      // ini akan secara otomatis memperbarui themeMode di MaterialApp
-                      // dan juga menyebabkan widget ini dibangun ulang
-                      // sehingga warna toggle visual juga akan diperbarui.
                       context.read<ThemeProvider>().toggleTheme();
-
-                      // Anda bisa opsional mengatur isChecked di sini jika Anda ingin
-                      // state _DataProfileState melacak secara lokal,
-                      // tapi lebih baik membiarkan ThemeProvider yang menjadi sumber kebenaran.
-                      // setState(() {
-                      //   isChecked = !isChecked;
-                      // });
                     },
                     child: Stack(
                       children: [
@@ -198,9 +171,10 @@ class _DataProfileState extends State<DataProfile> {
                               : Alignment.centerLeft,
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeOut,
-                          child: Container(
+                          child: AnimatedContainer(
                             width: 22,
                             height: 22,
+                            duration: Duration(milliseconds: 300),
                             decoration: const BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.white,
@@ -264,8 +238,10 @@ class _DataProfileState extends State<DataProfile> {
               ),
               child: const Text('Yes, I Sure'),
               onPressed: () async {
-                final authProvider =
-                    Provider.of<AuthProvider>(context, listen: false);
+                final authProvider = Provider.of<AuthProvider>(
+                  context,
+                  listen: false,
+                );
                 await AuthService().signOut();
                 authProvider.clearUser();
                 Provider.of<BookmarkProvider>(context, listen: false).clear();

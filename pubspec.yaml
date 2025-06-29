@@ -65,7 +65,9 @@ dependencies:
   firebase_storage: ^12.4.7
   shared_preferences: ^2.5.3
   animated_toggle_switch: ^0.8.5
-  
+  intl: ^0.18.1
+  flutter_native_splash: ^2.4.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

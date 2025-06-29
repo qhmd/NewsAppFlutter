@@ -28,6 +28,7 @@ import 'package:newsapp/presentation/state/like_providers.dart';
 import 'package:newsapp/presentation/state/news_providers.dart';
 import 'package:newsapp/presentation/state/pageindex_providers.dart';
 import 'package:newsapp/presentation/state/theme_provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 // Services
 import 'package:newsapp/services/setupfcm.dart';
@@ -35,7 +36,7 @@ import 'package:newsapp/services/local_notif.dart';
 
 // Firebase options
 import 'firebase_options.dart';
-
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 FirebaseFirestore firestore = FirebaseFirestore.instance;
 
 @pragma('vm:entry-point') // WAJIB agar tidak dihapus saat optimisasi
@@ -62,22 +63,24 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
   // Initialize Firebase
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
+FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   // Initialize Hive
   await Hive.initFlutter();
   Hive.registerAdapter(BookmarkAdapter());
   await Hive.openBox('bookmarkBox');
   await setupFCM();
+  await initializeDateFormatting('id_ID', '');
+  // await initializeDateFormatting('en_US', null);
 
   runApp(const NewsApp());
 }
 
 class NewsApp extends StatelessWidget {
+  
   const NewsApp({super.key});
 
   @override
@@ -114,6 +117,7 @@ class _MyAppState extends State<MyApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handleStartup();
     });
+    FlutterNativeSplash.remove();
   }
 
   Future<void> _handleStartup() async {
@@ -149,14 +153,14 @@ class _MyAppState extends State<MyApp> {
             authProvider.clearUser();
           }
         } catch (e) {
-          debugPrint('❌ Error in auth state change: $e');
+          debugPrint('Error in auth state change: $e');
         }
       });
 
       // Initialize notifications and FCM
       await LocalNotificationService().init();
     } catch (e) {
-      debugPrint('❌ Error during startup: $e');
+      debugPrint(' Error during startup: $e');
     }
   }
 
