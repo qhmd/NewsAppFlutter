@@ -156,25 +156,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final theme = Theme.of(context);
 
     final List<Widget> pages = [
-      CategoryNewsList(
-        category: 'all',
-        searchQuery: searchQuery,
-        scrollController: _scrollController,
-      ),
-      CategoryNewsList(category: 'sports', scrollController: _scrollController),
-      CategoryNewsList(
-        category: 'technology',
-        scrollController: _scrollController,
-      ),
-      CategoryNewsList(category: 'health', scrollController: _scrollController),
-      CategoryNewsList(
-        category: 'science',
-        scrollController: _scrollController,
-      ),
-      CategoryNewsList(
-        category: 'education',
-        scrollController: _scrollController,
-      ),
+      CategoryNewsList(category: 'all', searchQuery: searchQuery),
+      CategoryNewsList(category: 'sports'),
+      CategoryNewsList(category: 'technology'),
+      CategoryNewsList(category: 'health'),
+      CategoryNewsList(category: 'science'),
+      CategoryNewsList(category: 'education'),
     ];
 
     return PopScope(
@@ -296,6 +283,5 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       searchQuery = '';
       _searchController.clear();
     });
-
   }
 }
