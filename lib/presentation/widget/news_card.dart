@@ -155,7 +155,7 @@ class NewsCard extends StatelessWidget {
                               final isBookmarkedNow = bookmarkProvider
                                   .isBookmarked(newsBookmarkList.id);
                               final uid = context
-                                  .read<AuthProvider>()
+                                  .watch<AuthProvider>()
                                   .user
                                   ?.uid;
 

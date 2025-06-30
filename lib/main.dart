@@ -144,6 +144,8 @@ class _MyAppState extends State<MyApp> {
                 .doc(user.uid)
                 .get();
             final userData = userDoc.data();
+            print("isi user data di main${userData}");
+            if (userData == null) return;
             authProvider.setUser(
               user: user,
               userData: userData,

@@ -47,6 +47,8 @@ class AuthService {
       final user = userCredential.user;
 
       if (user != null) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
         final userDocRef = firestore.collection('users').doc(user.uid);
         final docSnapshot = await userDocRef.get();
         final fcmToken = await FirebaseMessaging.instance.getToken();
@@ -90,12 +92,10 @@ class AuthService {
           };
 
           await userDocRef.set(userData, SetOptions(merge: true));
-        }
-
         // Kirim ke AuthProvider
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        }
+        print("auth provider user Data ${userData}");
         authProvider.setUser(user : user,userData: userData, context: context);
-
       }
       return user;
     } catch (e) {

@@ -40,7 +40,6 @@ class LikeProvider with ChangeNotifier {
     final isCurrentlyLiked = _likeStatus[url] ?? false;
     print("isi currently like ${isCurrentlyLiked}");
 
-    // ✅ Optimistic Update
     if (isCurrentlyLiked) {
       _likeStatus[url] = false;
       _likeCount[url] = (_likeCount[url] ?? 1) - 1;
@@ -49,10 +48,7 @@ class LikeProvider with ChangeNotifier {
       _likeCount[url] = (_likeCount[url] ?? 0) + 1;
     }
 
-    // ✅ Notify dulu sebelum Firestore selesai
     notifyListeners();
-
-    // ✅ Sync ke Firestore (tanpa fetch ulang)
     try {
       if (isCurrentlyLiked) {
         await docRef.update({
@@ -66,7 +62,6 @@ class LikeProvider with ChangeNotifier {
       }
     } catch (e) {
       print("Firestore error: $e");
-      // ❗ Kalau mau, di sini kamu bisa rollback state
     }
   }
 

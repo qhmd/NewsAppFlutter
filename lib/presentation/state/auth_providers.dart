@@ -28,6 +28,8 @@ class AuthProvider with ChangeNotifier {
     if (_user?.uid == user?.uid) return;
 
     _user = user;
+    print(userData);
+    print("Set userDataa: $userData");
     _firestoreUserData = userData;
 
     print("Set user: $_user");

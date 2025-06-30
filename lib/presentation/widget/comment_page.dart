@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:newsapp/data/models/bookmark.dart';
 import 'package:newsapp/presentation/state/auth_providers.dart';
 import 'package:newsapp/presentation/state/pageindex_providers.dart';
@@ -28,7 +27,6 @@ class CommentPage extends StatefulWidget {
 class _CommentPageState extends State<CommentPage> {
   final TextEditingController _controller = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final ScrollController _scrollController = ScrollController();
 
   bool hasScrolledToTarget = false;
@@ -45,7 +43,8 @@ class _CommentPageState extends State<CommentPage> {
 
   Future<void> _sendComment() async {
     final auth = context.read<AuthProvider>().firestoreUserData;
-    final uid = _auth.currentUser?.uid;
+    // final uid = _auth.currentUser?.uid;
+    final uid = auth?['uid'];
 
     if (uid == null) {
       if (!mounted) return;
@@ -151,8 +150,6 @@ class _CommentPageState extends State<CommentPage> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.read<AuthProvider>().firestoreUserData;
-    final uid = _auth.currentUser?.uid;
     final theme = Theme.of(context);
 
     return Scaffold(
