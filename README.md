@@ -64,4 +64,4 @@ flutter pub get
 flutter run
 ```
 
-> Note: Make sure you have configured Firebase correctly and added all required API keys before running the app.
+> Note: Make sure you have configured Firebase correctly and added all required API keys before running the app (if you not using this is configuration).
