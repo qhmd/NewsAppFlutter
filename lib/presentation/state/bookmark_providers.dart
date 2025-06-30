@@ -48,7 +48,7 @@ class BookmarkProvider extends ChangeNotifier {
       _bookmarks.removeWhere((item) => item.id == b.id);
     } else {
       _bookmarkedIds.add(b.id);
-      _bookmarks.add(b);
+      _bookmarks.insert(0,b);
     }
 
     notifyListeners();
@@ -60,7 +60,6 @@ class BookmarkProvider extends ChangeNotifier {
       // ❗ rollback jika perlu
       print("Error syncing bookmark: $e");
 
-      // Opsional: rollback
       if (isAlreadyBookmarked) {
         _bookmarkedIds.add(b.id);
         _bookmarks.add(b);

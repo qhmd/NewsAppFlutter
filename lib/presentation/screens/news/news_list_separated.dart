@@ -51,8 +51,13 @@ class NewsListSeparated extends StatelessWidget {
         itemCount: newsList.length + 1,
         itemBuilder: (context, index) {
           if (index == newsList.length) {
-            // Kondisi loading saat load more
-            if (hasMore && loading) {
+            if (hasMore) {
+              return const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (loading) {
               return const Padding(
                 padding: EdgeInsets.all(16.0),
                 child: Center(child: CircularProgressIndicator()),

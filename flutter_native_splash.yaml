@@ -53,8 +53,10 @@ flutter_native_splash:
     # 768 pixels in diameter.
     #image: assets/android12splash.png
     # color: "#000000"
-
-    image: assets/images/ic_launcher.png         # Ini WAJIB untuk Android 12
+    background_image: "assets/images/newsicon.png"
+    background_image_dark: assets/images/newsicon.png
+    # image: assets/images/ic_launcher.png         
+    # image_dark: assets/images/ic_launcher.png         
     color: "#000000"
     color_dark: "#232323"
     icon_background_color: "#000000"

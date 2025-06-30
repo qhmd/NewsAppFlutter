@@ -113,7 +113,7 @@ class _CategoryNewsListState extends State<CategoryNewsList> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Tidak ada koneksi internet'),
+            content: Text('No Internet Connection'),
             duration: Duration(seconds: 2),
           ),
         );
