@@ -48,7 +48,7 @@ Mobile Application built with Flutter.
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/newsapp.git
+git clone https://github.com/qhmd/NewsAppFlutter.git
 cd newsapp
 ```
 
