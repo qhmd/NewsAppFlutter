@@ -10,11 +10,13 @@ import 'dart:async';
 class CategoryNewsList extends StatefulWidget {
   final String category;
   final String searchQuery;
+  final ScrollController scrollController;
 
   const CategoryNewsList({
     super.key,
     required this.category,
     this.searchQuery = '',
+    required this.scrollController,
   });
 
   @override
@@ -24,19 +26,17 @@ class CategoryNewsList extends StatefulWidget {
 class _CategoryNewsListState extends State<CategoryNewsList> {
   bool _previousConnectionState = false;
   Timer? _debounce;
-  late final ScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<ConnectionProvider>(context, listen: false);
       _previousConnectionState = provider.isConnected;
       if (provider.isConnected) {
         _fetchNewsData();
-        if (!_scrollController.hasListeners) {
-          _scrollController.addListener(_handleScroll);
+        if (!widget.scrollController.hasListeners) {
+          widget.scrollController.addListener(_handleScroll);
         }
       }
     });
@@ -67,8 +67,8 @@ class _CategoryNewsListState extends State<CategoryNewsList> {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 200), () {
       final provider = Provider.of<NewsProvider>(context, listen: false);
-      if (_scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent - 100 &&
+      if (widget.scrollController.position.pixels >=
+              widget.scrollController.position.maxScrollExtent - 100 &&
           !provider.isLoading(widget.category) &&
           provider.hasMore(widget.category)) {
         provider.fetchNews(widget.category);
@@ -79,12 +79,12 @@ class _CategoryNewsListState extends State<CategoryNewsList> {
   void _handleConnectionChange(bool isConnected) {
     if (!_previousConnectionState && isConnected) {
       _fetchNewsData();
-      if (!_scrollController.hasListeners) {
-        _scrollController.addListener(_handleScroll);
+      if (!widget.scrollController.hasListeners) {
+        widget.scrollController.addListener(_handleScroll);
       }
     } else if (_previousConnectionState && !isConnected) {
-      if (_scrollController.hasListeners) {
-        _scrollController.removeListener(_handleScroll);
+      if (widget.scrollController.hasListeners) {
+        widget.scrollController.removeListener(_handleScroll);
       }
     }
     _previousConnectionState = isConnected;
@@ -136,7 +136,7 @@ class _CategoryNewsListState extends State<CategoryNewsList> {
         commentProvider.ListenToCommentCount(news.url);
       }
       // Scroll ke atas setelah refresh
-      _scrollController.animateTo(
+      widget.scrollController.animateTo(
         0,
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
@@ -174,7 +174,7 @@ class _CategoryNewsListState extends State<CategoryNewsList> {
       children: [
         NewsListSeparated(
           newsList: newsList,
-          scrollController: _scrollController,
+          scrollController: widget.scrollController,
           isConnected: isConnected,
           hasMore: provider.hasMore(widget.category),
           loading: isLoading,
